@@ -1,7 +1,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/math/SafeMath.sol";
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./openzeppelin-contracts/contracts/math/SafeMath.sol";
+import "./openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * Realization a addresses whitelist

@@ -2,19 +2,20 @@ pragma solidity >=0.6.0 <0.7.0;
 
 //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
 //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "./openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import "./Whitelist.sol";
 import "./CommonConstants.sol";
+import "./Granted.sol";
 
-contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist {
+contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
     using SafeMath for uint256;
     using Address for address;
     
     uint256 public maxGasPrice = 1 * DECIMALS;
     
-    uint256 latestBlockNumber;
+    uint256 firstBlockNumber;
     
     uint256 constant grantMorePerBlock = 10 * DECIMALS;
     
@@ -31,12 +32,15 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist {
     uint256 grantReserveExchangeRate = 99e4; // grant discount
     
     uint256 tokensAmountToGrant;
+        
+    modifier onlyPassTransferLimit(uint256 amount) {
+         require(
+            getAmountLockUp(_msgSender()).add(amount) <= balanceOf(_msgSender()), 
+            'TransferLimit: There are no allowance tokens to transfer'
+        );
+        _;
+    }
 
-    // user allowance
-    mapping (address => uint256) private _uaTokensPerBlock;
-    mapping (address => uint256) private _uaBlockNumber;
-    mapping (address => uint256) private _uaTokensToTransfer;
-    
     /**
      * @param name Token name
      * @param symbol Token symbol
@@ -51,7 +55,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist {
         public 
     {
         tokensAmountToGrant = grantInitialMax;
-        latestBlockNumber = block.number;
+        firstBlockNumber = block.number;
     }
     
     modifier validGasPrice() {
@@ -85,64 +89,36 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist {
      * 
      * @param account recipient address
      * @param amount token amount
-     * @param tokensRatio tokens count available to recipient with each mined block
+     * @param lockupUntilBlock lockup amount until reached block
+     * @param gradual if true then lockup limit is gradually decreasing
      */
-    function grant(address account, uint256 amount, uint256 tokensRatio) public onlyOwner {
-        uint256 availableTokens = availableTokensToGrant();
-
-        require(availableTokens >= amount, 'There are no available tokens to grant');
-        require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');
+    function grant(address account, uint256 amount, uint256 lockupUntilBlock, bool gradual) public onlyOwner {
         
-        
-        if (totalSupply() > grantInitialMax) {
+        if (totalSupply().add(amount) <= grantInitialMax) {
+            //allow grant;
+        } else {
+            require(
+                (totalSupply().add(amount) < grantInitialMax.add(((block.number).sub(firstBlockNumber)).mul(grantMorePerBlock))), 
+                'This many tokens are not available to be granted yet' 
+            );
             require(
                 totalSupply().mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-grantReserveMinPercent).div(100), 
                 'Amount exceeds available reserve limit' 
             );
         }
+       
+        require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');
         
         _mint(account, amount);
         
         if (account != address(this)) {
-            if (tokensRatio == 0) {
-                tokensRatio = amount;
-            }
+            addGrantLimit(account, amount, lockupUntilBlock, gradual);
+        }
+        
+    }
 
-            if (_uaBlockNumber[account] != 0) {
-                _uaTokensToTransfer[account] = getUserAllowance(account);
-            }
-            _uaBlockNumber[account] = block.number;
-            _uaTokensPerBlock[account] = tokensRatio;
-        }
-        
-        latestBlockNumber = block.number;
-        tokensAmountToGrant = availableTokens.sub(amount);
-    }
-    
     /**
-     * count of tokens which available to mint by owner 
-     * @return amount count of tokens which available to mint by owner 
-     */
-    function availableTokensToGrant() public view returns(uint256 amount) {
-        amount = tokensAmountToGrant.add(((block.number).sub(latestBlockNumber)).mul(grantMorePerBlock));
-    }
-    
-    /**
-     * count of tokens which available to transfer by account
-     * @param account recipient
-     * @return destinationCount available tokens 
-     */
-    function getUserAllowance(address account) public view returns (uint256 destinationCount) {
-    
-        destinationCount = (_uaTokensToTransfer[account]).add(((block.number).sub(_uaBlockNumber[account])).mul(_uaTokensPerBlock[account]));
-        
-        if (balanceOf(account) <= destinationCount) {
-            destinationCount = balanceOf(account);
-        }
-    }
-    
-    /**
-     * Overrided {ERC20-transfer} method.
+     * Overrode {ERC20-transfer} method.
      * There are added some features:
      * 1. added validation of restriction limit to transfer
      * 2. if recipient is self contract than we will 
@@ -153,15 +129,8 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist {
      * @param amount amount
      * @return success
      */
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        if (recipient != address(this)) {
-            uint256 allowanceTokens = getUserAllowance(_msgSender());
-            require(allowanceTokens>=amount, 'There are no allowance tokens to transfer');
-            
-            _uaBlockNumber[_msgSender()] = block.number;
-            _uaTokensToTransfer[_msgSender()] = allowanceTokens.sub(amount);
-            
-        }
+    function transfer(address recipient, uint256 amount) public onlyPassTransferLimit(amount) virtual override returns (bool) {
+      
         _transfer(_msgSender(), recipient, amount);
         
         if (recipient == address(this)) {

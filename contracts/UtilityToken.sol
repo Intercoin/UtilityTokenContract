@@ -2,7 +2,7 @@ pragma solidity >=0.6.0 <0.7.0;
 import "./CommonConstants.sol";
 import "./UtilityBase.sol";
 
-contract UtilityTokenImproved is UtilityBase {
+contract UtilityToken is UtilityBase {
     using Address for address;
     
     uint256 private _sellExchangeRate = 99e4; // 99% * 1e6
@@ -35,11 +35,11 @@ contract UtilityTokenImproved is UtilityBase {
     }
 
     /**
-     * @dev gettign token2 and mint instead own tokens
+     * @dev getting token2 and mint instead own tokens
      * proceeded if user set allowance in secondary_token contract
-     * @param _isDonate if set true, contract will not send tokens
+     * @param isDonate if set true, contract will not send tokens
      */
-    function receiveERC20Token2(bool _isDonate) validGasPrice public {
+    function receiveERC20Token2(bool isDonate) validGasPrice public {
         uint256 _allowedAmount = IERC20(token2).allowance(_msgSender(), address(this));
         
         require(_allowedAmount > 0, 'Amount exceeds allowed balance');
@@ -47,7 +47,7 @@ contract UtilityTokenImproved is UtilityBase {
         // try to get
         bool success = IERC20(token2).transferFrom(_msgSender(), address(this), _allowedAmount);
         require(success == true, 'Transfer tokens were failed'); 
-        if (!_isDonate) {
+        if (!isDonate) {
             _receivedToken2(_allowedAmount);
         }
     }
@@ -71,9 +71,6 @@ contract UtilityTokenImproved is UtilityBase {
      * @dev overall tokens(token2) balance of this contract
      */
     function _receivedToken2(uint256 token2Amount) private {
-        //uint256 balanceToken2 = IERC20(token2).balanceOf(address(this));
-        //uint256 amount2send = token2Amount.mul(buyExchangeRate()).div(1e6); // "buy exchange" interpretation with rate 100%
-        //_mint(_msgSender(), amount2send);
         _mintedOwnTokens(token2Amount);
     }  
     

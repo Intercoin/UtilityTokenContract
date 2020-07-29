@@ -35,7 +35,7 @@ contract testWhitelist {
         address[] memory list = new address[](2);
         list[0] = acc1;
         list[1] = acc2;
-        try whitelistInstance.whitelist(list) {
+        try whitelistInstance.whitelistAdd(list) {
             Assert.ok(true, 'Adding to whitelist');
         } catch Error(string memory reason) {
             // This is executed in case
@@ -65,7 +65,7 @@ contract testWhitelist {
         list[1] = acc2;
         
         // try to grant more than allowed
-        try whitelistInstance.unWhitelist(list) {
+        try whitelistInstance.whitelistRemove(list) {
             Assert.ok(true, 'removing from whitelist');
         } catch Error(string memory reason) {
             // This is executed in case

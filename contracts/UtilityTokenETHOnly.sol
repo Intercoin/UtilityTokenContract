@@ -1,13 +1,8 @@
 pragma solidity >=0.6.0 <0.7.0;
 
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "./github/OpenZeppelin/openzeppelin-contracts/contracts/access/Ownable.sol";
-
 import "./UtilityBase.sol";
 
-contract UtilityToken is UtilityBase {
+contract UtilityTokenETHOnly is UtilityBase {
     
     uint256 private _sellExchangeRate = 99e4; // 99% * 1e6
     uint256 private _buyExchangeRate = 100e4; // 100% *1e6
