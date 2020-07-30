@@ -25,14 +25,21 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
     // amount that can be granted one-time by contract without transactions failing
     uint256 tokensGrantOneTimeLimit = 1000000 * DECIMALS;
     
-    // consider total token2 balance held at start of block when sending, grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
-    // In other words this is minimum reserve requirements
-    uint256 grantReserveMinPercent = 20; 
+    // consider total token2 balance held at start of block when sending, 
+    // grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
+    uint256 grantReserveMinPercent = 20;
     
-    uint256 grantReserveExchangeRate = 99e4; // grant discount
+    // consider total token2 balance held at start of block when sending, 
+    // grant fails if token1beingSent * exchangeRate > token2balance * this number / 100
+    uint256 grantTransactionMaxPercent = 2;
     
-    uint256 tokensAmountToGrant;
-        
+    // deficit = token1outstanding * exchangeRate - token2balance . 
+    // Grant fails if grantDeficitMax exceeds this number.
+    uint256 constant grantDeficitMax = 1000000 * DECIMALS;
+    
+    // grant discount
+    uint256 grantReserveExchangeRate = 99e4; 
+    
     modifier onlyPassTransferLimit(uint256 amount) {
          require(
             getAmountLockUp(_msgSender()).add(amount) <= balanceOf(_msgSender()), 
@@ -54,7 +61,6 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
         Whitelist() 
         public 
     {
-        tokensAmountToGrant = grantInitialMax;
         firstBlockNumber = block.number;
     }
     
@@ -105,6 +111,16 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
                 totalSupply().mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-grantReserveMinPercent).div(100), 
                 'Amount exceeds available reserve limit' 
             );
+            require(
+                amount.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(grantTransactionMaxPercent).div(100),
+                'Amount exceeds transaction max percent' 
+            );
+            
+            require(
+                ((totalSupply().add(amount)).mul(grantReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= grantDeficitMax,
+                'Amount exceeds deficit max'
+            );
+    
         }
        
         require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');

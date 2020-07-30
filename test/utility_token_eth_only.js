@@ -190,7 +190,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
     });
     
-    it('should eaxchange Token/ETH', async () => {
+    it('should exchange Token/ETH', async () => {
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
         const amountETHSendToContract = 10*10**18; // 10ETH
         
