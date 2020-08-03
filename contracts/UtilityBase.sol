@@ -38,7 +38,18 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
     uint256 constant grantDeficitMax = 1000000 * DECIMALS;
     
     // grant discount
-    uint256 grantReserveExchangeRate = 99e4; 
+    uint256 grantReserveExchangeRate = 99e4;
+    
+    // total granted
+    uint256 grantTotal = 0;
+    
+    // default variable for grant permissions
+    uint256 grantLockupUntilBlockDiff = 100;
+    bool grantGradual = true;
+    
+    uint256 private tokensForClaimingCount = 0;
+    address[] private tokensForClaiming;
+    mapping (address => bool) private tokensForClaimingMap;
     
     modifier onlyPassTransferLimit(uint256 amount) {
          require(
@@ -47,6 +58,8 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
         );
         _;
     }
+
+    event claimingTokenAdded(address token);
 
     /**
      * @param name Token name
@@ -85,54 +98,101 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
         maxGasPrice = gasPrice;
     }
     
-   
-    /**
-     * grant tokens to recipient with restriction limit to transfer
-     * Note that owner have restriction limit to mint too.
-     * 
-     * @dev if tokensRatio == 0 then tokensRatio = amount; 
-     * it means that all tokens will be available in next block
-     * 
-     * @param account recipient address
-     * @param amount token amount
-     * @param lockupUntilBlock lockup amount until reached block
-     * @param gradual if true then lockup limit is gradually decreasing
-     */
-    function grant(address account, uint256 amount, uint256 lockupUntilBlock, bool gradual) public onlyOwner {
-        
-        if (totalSupply().add(amount) <= grantInitialMax) {
-            //allow grant;
+    function claimingTokenAdd(address tokenForClaiming) public onlyOwner {
+        require(tokenForClaiming.isContract(), 'tokenForClaiming must be a contract address');
+        if (tokensForClaimingMap[tokenForClaiming]) {
+            // already exist
         } else {
-            require(
-                (totalSupply().add(amount) < grantInitialMax.add(((block.number).sub(firstBlockNumber)).mul(grantMorePerBlock))), 
-                'This many tokens are not available to be granted yet' 
-            );
-            require(
-                totalSupply().mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-grantReserveMinPercent).div(100), 
-                'Amount exceeds available reserve limit' 
-            );
-            require(
-                amount.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(grantTransactionMaxPercent).div(100),
-                'Amount exceeds transaction max percent' 
-            );
-            
-            require(
-                ((totalSupply().add(amount)).mul(grantReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= grantDeficitMax,
-                'Amount exceeds deficit max'
-            );
-    
+            tokensForClaiming.push(tokenForClaiming);
+            tokensForClaimingCount = tokensForClaimingCount.add(1);
+            tokensForClaimingMap[tokenForClaiming] = true;
+            emit claimingTokenAdded(tokenForClaiming);
         }
-       
-        require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');
-        
-        _mint(account, amount);
-        
-        if (account != address(this)) {
-            addGrantLimit(account, amount, lockupUntilBlock, gradual);
-        }
-        
     }
+    
+    /**
+     * @return list list of tokens added for claiming
+     */
+    function claimingTokensView() public view returns (address[] memory list) {
+        list = tokensForClaiming;
+    }
+    
+    
+    function claimingTokensWithdraw() public onlyOwner returns (address[] memory list) {
+        
+        for (uint256 i = 0; i < tokensForClaimingCount; i++) {
+            uint256 amount = IERC20(tokensForClaiming[i]).balanceOf(address(this));
+            if (amount > 0) {
+                // try to get
+                bool success = IERC20(tokensForClaiming[i]).transferFrom(address(this), owner(), amount);
+                require(success == true, 'Transfer tokens were failed'); 
+            }
+        }
 
+    }
+    
+    /**
+     * @dev getting own tokens instead claimed tokens
+     */
+    function claim() validGasPrice public {
+        
+        require(tokensForClaimingCount > 0, 'There are no allowed tokens for claiming');
+        
+        bool hasAllowedAmount = false;
+        
+        for (uint256 i = 0; i < tokensForClaimingCount; i++) {
+        
+            uint256 allowedAmount = IERC20(tokensForClaiming[i]).allowance(_msgSender(), address(this));
+            
+            if (allowedAmount > 0) {
+            
+                hasAllowedAmount = true;
+                
+                // own token with rate 1to1
+                uint256 amount = allowedAmount;
+                
+                grantTotal = grantTotal.add(amount);
+                
+                if (grantTotal <= grantInitialMax) {
+                    //allow grant without check any restrictions;
+                } else {
+                    require(
+                        (grantTotal < grantInitialMax.add(((block.number).sub(firstBlockNumber)).mul(grantMorePerBlock))), 
+                        'This many tokens are not available to be granted yet' 
+                    );
+                    require(
+                        grantTotal.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-grantReserveMinPercent).div(100), 
+                        'Amount exceeds available reserve limit' 
+                    );
+                    require(
+                        amount.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(grantTransactionMaxPercent).div(100),
+                        'Amount exceeds transaction max percent' 
+                    );
+                    
+                    require(
+                        ((grantTotal).mul(grantReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= grantDeficitMax,
+                        'Amount exceeds deficit max'
+                    );
+            
+                }
+               
+                require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');
+                
+                
+                // try to get
+                bool success = IERC20(tokensForClaiming[i]).transferFrom(_msgSender(), address(this), allowedAmount);
+                require(success == true, 'Transfer tokens were failed'); 
+                
+                // grant own tokens
+                _mint(_msgSender(), amount);
+                
+                //
+                addGrantLimit(_msgSender(), amount, block.number.add(grantLockupUntilBlockDiff), grantGradual);
+            }
+        }
+        require(hasAllowedAmount == true, 'Amount exceeds allowed balance');
+    }
+    
     /**
      * Overrode {ERC20-transfer} method.
      * There are added some features:

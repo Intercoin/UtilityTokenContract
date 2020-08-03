@@ -9,6 +9,7 @@ contract UtilityToken is UtilityBase {
     uint256 private _buyExchangeRate = 100e4; // 100% *1e6
     
     address private token2;
+    
     /**
      * @param name Token name
      * @param symbol Token symbol
@@ -23,6 +24,7 @@ contract UtilityToken is UtilityBase {
         UtilityBase(name, symbol) 
         public 
     {
+        require(secondary_token.isContract(), 'secondary_token must be a contract address');
         token2 = secondary_token;
     }
     

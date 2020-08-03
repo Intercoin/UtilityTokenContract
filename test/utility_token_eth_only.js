@@ -1,6 +1,8 @@
 const BN = require('bn.js'); // https://github.com/indutny/bn.js
 const util = require('util');
 const UtilityTokenETHOnly = artifacts.require("UtilityTokenETHOnly");
+const UtilityTokenETHOnlyMock = artifacts.require("UtilityTokenETHOnlyMock");
+const ERC20MintableToken = artifacts.require("ERC20Mintable");
 const truffleAssert = require('truffle-assertions');
 
 contract('UtilityTokenETHOnly', (accounts) => {
@@ -18,17 +20,6 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
     });
   
-    it('should grant by owner only', async () => {
-        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
-        const currentBlockInfo = await web3.eth.getBlock("latest");
-        const grantAmount = (10*10**18).toString(16);
-        
-        await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, currentBlockInfo.number+100, false, { from: accountTwo }), 
-            "Ownable: caller is not the owner."
-        );
-    });
-    
     it('should used transferOwnership by owner only', async () => {
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
       
@@ -39,23 +30,98 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
         await utilityTokenETHOnlyInstance.transferOwnership(accountTwo, { from: accountOne });
     });
-  
-    it('should grant to account', async () => {
+
+    it('should add address TokenForClaiming to list', async () => {
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountTwo }), 
+            "Ownable: caller is not the owner."
+        );
+        
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claimingTokenAdd(accountThree, { from: accountOne }), 
+            "tokenForClaiming must be a contract address"
+        );
+        // add to claim list
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        
+        let list = (await utilityTokenETHOnlyInstance.claimingTokensView({ from: accountOne }));
+        
+        assert.notEqual(
+            list.indexOf(ERC20MintableTokenInstance.address),
+            -1,
+            "TokenForClaiming does not added in list as expected");
+    });
+
+    it('should revert claim if it wasn\'t approve tokens before', async () => {
+        // setup
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        
+        const grantAmount = (10*10**18).toString(16);
+        
+        // add to claim list
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        //
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "Amount exceeds allowed balance"
+        );
+    });
+    
+    it('should revert claim if it wasn\'t added TokenForClaiming before', async () => {
+        // setup
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        
+        const grantAmount = (10*10**18).toString(16);
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        //make approve
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+grantAmount, { from: accountTwo });
+        
+        //
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "There are no allowed tokens for claiming"
+        );
+        
+    });
+
+    it('should claim to account', async () => {
       
         // setup
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
      
          // Get initial balances of second account.
         const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
         
-        // Make grant from first account to second. for 100 blocks and gradual 
-        await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, currentBlockInfo.number+100, true, { from: accountOne });
+         // add to claim list
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        //make approve
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+grantAmount, { from: accountTwo });
+        
+        // claim()
+        await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
         
         // Get balances of first and second account after the transactions.
         const accountTwoEndingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
-    
+
         assert.equal(
             new BN(accountTwoEndingBalance,16).toString(16),
             (new BN(accountTwoStartingBalance,16)).add(new BN(grantAmount,16)).toString(16), 
@@ -63,53 +129,69 @@ contract('UtilityTokenETHOnly', (accounts) => {
         );
 
     });    
-  
+
     it('checking transfer limit none-gradual', async () => {
         // setup
-        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const utilityTokenETHOnlyMockInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
+        await utilityTokenETHOnlyMockInstance.setGrantGradual(false, { from: accountTwo });
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
-        const countBlocksNeedToPass = 10;
+        const countBlocksNeedToPass = 100;
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
     
-        // Make grant from first account to second. for 10 blocks and gradual = false
+        // Make grant from first account to second. for 100 blocks and gradual = false
         // Note that currentBlockInfo - its block before for transaction below !!!  so plus 1 needed
         const startBlockNumber = currentBlockInfo.number+1;
-        await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, false, { from: accountOne });
+        
+        // claim mechanizm
+        await utilityTokenETHOnlyMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyMockInstance.address, '0x'+grantAmount, { from: accountTwo });
+        await utilityTokenETHOnlyMockInstance.claim({ from: accountTwo });
+        //----------------
+        //await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, false, { from: accountOne });
         
         // one block spent for transaction before so 
         // emulate skipping countBlocksNeedToPass-2 block
         for (let i = 0; i < countBlocksNeedToPass-2; i++) {
-            await utilityTokenETHOnlyInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
+            await utilityTokenETHOnlyMockInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
         }
         
         // for now passed block spent countBlocksNeedToPass-1
         await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo }), 
+            utilityTokenETHOnlyMockInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo }), 
             "TransferLimit: There are no allowance tokens to transfer"
         );
         // after this block passed by 1
-        await utilityTokenETHOnlyInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
+        await utilityTokenETHOnlyMockInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
         // and transfer have to be available for account two
-        await utilityTokenETHOnlyInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo });
+        await utilityTokenETHOnlyMockInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo });
         
-        await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, currentBlockInfo.number+100, false, { from: accountTwo }), 
-            "Ownable: caller is not the owner."
-        );
+        // await truffleAssert.reverts(
+        //     utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, currentBlockInfo.number+100, false, { from: accountTwo }), 
+        //     "Ownable: caller is not the owner."
+        // );
 
-    });    
+    }); 
     
     it('checking transfer limit gradual', async () => {
         // setup
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
-        const countBlocksNeedToPass = 10;
+        const countBlocksNeedToPass = 100;
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
 
-        // Make grant from first account to second. for 10 blocks and gradual = true
+        // Make grant from first account to second. for 100 blocks and gradual = true
         // Note that currentBlockInfo - its block before for transaction below !!!  so plus 1 needed
         const startBlockNumber = currentBlockInfo.number+1;
-        await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, true, { from: accountOne });
+        
+        // claim mechanizm
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+grantAmount, { from: accountTwo });
+        await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
+        //await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, true, { from: accountOne });
 
         // one block spent for transaction before so 
         // emulate skipping countBlocksNeedToPass/2-2 block
@@ -269,5 +351,5 @@ contract('UtilityTokenETHOnly', (accounts) => {
         );
         
     });    
- 
+    
 });
