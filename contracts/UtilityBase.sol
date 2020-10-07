@@ -18,7 +18,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
     uint256 firstBlockNumber;
     
     uint256 constant grantMorePerBlock = 10 * DECIMALS;
-    
+
     // initial amount that can be granted by contract without transactions failing
     uint256 constant grantInitialMax = 1000000 * DECIMALS;
     
@@ -118,7 +118,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
     }
     
     
-    function claimingTokensWithdraw() public onlyOwner returns (address[] memory list) {
+    function claimingTokensWithdraw() public onlyOwner {
         
         for (uint256 i = 0; i < tokensForClaimingCount; i++) {
             uint256 amount = IERC20(tokensForClaiming[i]).balanceOf(address(this));

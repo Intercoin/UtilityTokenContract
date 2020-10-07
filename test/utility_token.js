@@ -4,6 +4,7 @@ const UtilityToken = artifacts.require("UtilityToken");
 const UtilityTokenMock = artifacts.require("UtilityTokenMock");
 const ERC20MintableToken = artifacts.require("ERC20Mintable");
 const ERC20MintableToken2 = artifacts.require("ERC20Mintable");
+const UtilityTokenFactory = artifacts.require("UtilityTokenFactory");
 const truffleAssert = require('truffle-assertions');
 //0x0000000000000000000000000000000000000000
 contract('UtilityToken', (accounts) => {
@@ -366,5 +367,28 @@ contract('UtilityToken', (accounts) => {
         
         
     });    
-   
+
+    it('should deployed correctly with correctly owner through factory', async () => {
+        
+        const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
+        const utilityTokenFactoryInstance = await UtilityTokenFactory.new({ from: accountThree });
+        await utilityTokenFactoryInstance.createUtilityToken('t1','t1', ERC20MintableToken2Instance.address, { from: accountOne });
+        
+        var utilityTokenAddress; 
+        await utilityTokenFactoryInstance.getPastEvents('UtilityTokenCreated', {
+            filter: {addr: accountOne}, // Using an array in param means OR: e.g. 20 or 23
+            fromBlock: 0,
+            toBlock: 'latest'
+        }, function(error, events){ /* console.log(events);*/ })
+        .then(function(events){
+            
+            utilityTokenAddress = events[0].returnValues['utilityToken'];
+        });
+
+        let utilityTokenInstance = await UtilityToken.at(utilityTokenAddress);
+        
+        const owner = (await utilityTokenInstance.owner());
+        assert.equal(owner, accountOne, 'owner is not accountOne');
+        
+    });
 });

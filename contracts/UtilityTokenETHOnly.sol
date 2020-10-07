@@ -19,7 +19,6 @@ contract UtilityTokenETHOnly is UtilityBase {
         UtilityBase(name, symbol) 
         public 
     {
-//        _discount = discount;
     }
     
     /**

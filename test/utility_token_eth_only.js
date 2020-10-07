@@ -3,6 +3,7 @@ const util = require('util');
 const UtilityTokenETHOnly = artifacts.require("UtilityTokenETHOnly");
 const UtilityTokenETHOnlyMock = artifacts.require("UtilityTokenETHOnlyMock");
 const ERC20MintableToken = artifacts.require("ERC20Mintable");
+const UtilityTokenETHOnlyFactory = artifacts.require("UtilityTokenETHOnlyFactory");
 const truffleAssert = require('truffle-assertions');
 
 contract('UtilityTokenETHOnly', (accounts) => {
@@ -19,7 +20,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         assert.equal(owner, accountOne, 'owner is not accountOne');
         
     });
-  
+    
     it('should used transferOwnership by owner only', async () => {
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
       
@@ -351,5 +352,32 @@ contract('UtilityTokenETHOnly', (accounts) => {
         );
         
     });    
+
+    it('should deployed correctly with correctly owner through factory', async () => {
+        
+        const utilityTokenETHOnlyFactoryInstance = await UtilityTokenETHOnlyFactory.new({ from: accountThree });
+        await utilityTokenETHOnlyFactoryInstance.createUtilityTokenETHOnly('t1','t1', { from: accountOne });
+        
+        var utilityTokenETHOnlyAddress; 
+        await utilityTokenETHOnlyFactoryInstance.getPastEvents('UtilityTokenETHOnlyCreated', {
+            filter: {addr: accountOne}, // Using an array in param means OR: e.g. 20 or 23
+            fromBlock: 0,
+            toBlock: 'latest'
+        }, function(error, events){ /* console.log(events);*/ })
+        .then(function(events){
+            
+            utilityTokenETHOnlyAddress = events[0].returnValues['utilityTokenETHOnly'];
+        });
+        console.log(utilityTokenETHOnlyAddress);
+        
+        let utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.at(utilityTokenETHOnlyAddress);
+        
+        
+        
+        const owner = (await utilityTokenETHOnlyInstance.owner());
+        assert.equal(owner, accountOne, 'owner is not accountOne');
+        
+    });
+  
     
 });
