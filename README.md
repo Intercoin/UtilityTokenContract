@@ -29,20 +29,20 @@ grantLockupUntilBlockDiff|uint256|100| added block count limit for each claim
 grantGradual|bool|true| if true then limit is gradually decreasing
 
 ## Methods
-### ++for UtilityToken.sol only++
+### for UtilityToken.sol only
 #### receiveERC20Token2
 method received Token2.
 Note that tokens need to approved before
 #### receive
 internal method triggered if contract getting ETH. **but is not supported and through an exception**
 
-### ++for UtilityTokenETHOnly.sol only++
+### for UtilityTokenETHOnly.sol only
 #### donateETH
 Method used for donate ETH without receiving token
 #### receive
 internal method triggered if contract getting ETH
 
-### ++for boths (UtilityTokenETHOnly.sol and UtilityToken.sol++
+### for boths (UtilityTokenETHOnly.sol and UtilityToken.sol
 #### setMaxGasPrice
 Params:
 name  | type | description
@@ -81,6 +81,7 @@ Params:
 name  | type | description
 --|--|--
 recipient|address| recipient
+
 Calculate amount of tokens need to be left at recipient's account
 
 #### whitelistAdd
