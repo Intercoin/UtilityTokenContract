@@ -18,15 +18,15 @@ name|type|value|description
 --|--|--|--
 DECIMALS|uint256|1e18|Fraction part.
 maxGasPrice|uint256|1*DECIMALS|maximum Gas Price(in wei) used for transaction. Transaction fail if reached limit
-grantMorePerBlock|uint256|10*DECIMALS|how many tokens available to grant after each block after contract deployed
-grantInitialMax|uint256|1000000*DECIMALS|initial amount that can be granted by contract without transactions failing
-tokensGrantOneTimeLimit|uint256|1000000*DECIMALS|amount that can be granted one-time by contract without transactions failing
-grantReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
-grantTransactionMaxPercent|uint256|2| grant fails if token1beingSent * exchangeRate > token2balance * this number / 100
-grantDeficitMax|uint256|1000000 * DECIMALS| Grant fails if grantDeficitMax exceeds (token1outstanding * exchangeRate - token2balance)
-grantReserveExchangeRate|uint256|99e4| 99% mul 1e6
-grantLockupUntilBlockDiff|uint256|100| added block count limit for each claim
-grantGradual|bool|true| if true then limit is gradually decreasing
+claimMorePerBlock|uint256|10*DECIMALS|how many tokens available to claim after each block after contract deployed
+claimInitialMax|uint256|1000000*DECIMALS|initial amount that can be claimed by contract without transactions failing
+tokensGrantOneTimeLimit|uint256|1000000*DECIMALS|amount that can be claimed one-time by contract without transactions failing
+claimReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
+claimTransactionMaxPercent|uint256|2| claim fails if token1beingSent * exchangeRate > token2balance * this number / 100
+claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (token1outstanding * exchangeRate - token2balance)
+claimReserveExchangeRate|uint256|99e4| 99% mul 1e6
+claimLockupPeriod|uint256|100| added limit in seconds for each claim
+claimGradual|bool|true| if true then limit is gradually decreasing
 
 ## Methods
 ### for UtilityToken.sol only

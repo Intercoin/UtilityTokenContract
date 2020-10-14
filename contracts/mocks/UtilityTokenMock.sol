@@ -20,12 +20,19 @@ contract UtilityTokenMock is UtilityToken {
 //        _discount = discount;
     }
 
-    function setGrantGradual(bool value) public {
-        grantGradual = value;
+    function setClaimGradual(bool value) public {
+        claimGradual = value;
     }
-    function setGrantLockupUntilBlockDiff(uint256 value) public {
-        grantLockupUntilBlockDiff = value;
+    function setClaimLockupPeriod(uint256 value) public {
+        claimLockupPeriod = value;
     }
+    function getIndexClaimed(uint256 i) public view returns( uint256, uint256, uint256, bool) {
+     return (_claimed[msg.sender][i].amount, _claimed[msg.sender][i].startTime, _claimed[msg.sender][i].endTime, _claimed[msg.sender][i].gradual);
+ }
+ 
+  function getNow() public view returns( uint256) {
+      return now;
+  }
     
 }
 

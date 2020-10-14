@@ -7,51 +7,52 @@ import "./openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import "./Whitelist.sol";
 import "./CommonConstants.sol";
-import "./Granted.sol";
+import "./Claimed.sol";
 
-contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
+contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed {
     using SafeMath for uint256;
     using Address for address;
     
     uint256 public maxGasPrice = 1 * DECIMALS;
     
-    uint256 firstBlockNumber;
+    uint256 startTime;
     
-    uint256 constant grantMorePerBlock = 10 * DECIMALS;
+    uint256 constant claimMorePerSeconds = 10 * DECIMALS;
 
-    // initial amount that can be granted by contract without transactions failing
-    uint256 constant grantInitialMax = 1000000 * DECIMALS;
+    // initial amount that can be claimed by contract without transactions failing
+    uint256 constant claimInitialMax = 1000000 * DECIMALS;
     
-    // amount that can be granted one-time by contract without transactions failing
-    uint256 tokensGrantOneTimeLimit = 1000000 * DECIMALS;
-    
-    // consider total token2 balance held at start of block when sending, 
-    // grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
-    uint256 grantReserveMinPercent = 20;
+    // amount that can be claimed one-time by contract without transactions failing
+    uint256 tokensClaimOneTimeLimit = 1000000 * DECIMALS;
     
     // consider total token2 balance held at start of block when sending, 
-    // grant fails if token1beingSent * exchangeRate > token2balance * this number / 100
-    uint256 grantTransactionMaxPercent = 2;
+    // claim fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
+    uint256 claimReserveMinPercent = 20;
+    
+    // consider total token2 balance held at start of block when sending, 
+    // claim fails if token1beingSent * exchangeRate > token2balance * this number / 100
+    uint256 claimTransactionMaxPercent = 2;
     
     // deficit = token1outstanding * exchangeRate - token2balance . 
-    // Grant fails if grantDeficitMax exceeds this number.
-    uint256 constant grantDeficitMax = 1000000 * DECIMALS;
+    // claim fails if claimDeficitMax exceeds this number.
+    uint256 constant claimDeficitMax = 1000000 * DECIMALS;
     
-    // grant discount
-    uint256 grantReserveExchangeRate = 99e4;
+    // claim discount
+    uint256 claimReserveExchangeRate = 99e4;
     
-    // total granted
-    uint256 grantTotal = 0;
+    // total claimed
+    uint256 claimTotal = 0;
     
-    // default variable for grant permissions
-    uint256 grantLockupUntilBlockDiff = 100;
-    bool grantGradual = true;
+    // default variable for claim permissions
+    uint256 claimLockupPeriod = 100; // seconds
+    bool claimGradual = true;
     
     uint256 private tokensForClaimingCount = 0;
     address[] private tokensForClaiming;
     mapping (address => bool) private tokensForClaimingMap;
     
     modifier onlyPassTransferLimit(uint256 amount) {
+        
          require(
             getAmountLockUp(_msgSender()).add(amount) <= balanceOf(_msgSender()), 
             'TransferLimit: There are no allowance tokens to transfer'
@@ -74,7 +75,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
         Whitelist() 
         public 
     {
-        firstBlockNumber = block.number;
+        startTime = now;
     }
     
     modifier validGasPrice() {
@@ -151,43 +152,43 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Granted {
                 // own token with rate 1to1
                 uint256 amount = allowedAmount;
                 
-                grantTotal = grantTotal.add(amount);
+                claimTotal = claimTotal.add(amount);
                 
-                if (grantTotal <= grantInitialMax) {
-                    //allow grant without check any restrictions;
+                if (claimTotal <= claimInitialMax) {
+                    //allow claim without check any restrictions;
                 } else {
                     require(
-                        (grantTotal < grantInitialMax.add(((block.number).sub(firstBlockNumber)).mul(grantMorePerBlock))), 
-                        'This many tokens are not available to be granted yet' 
+                        (claimTotal < claimInitialMax.add(((now).sub(startTime)).mul(claimMorePerSeconds))), 
+                        'This many tokens are not available to be claimed yet' 
                     );
                     require(
-                        grantTotal.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-grantReserveMinPercent).div(100), 
+                        claimTotal.mul(claimReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-claimReserveMinPercent).div(100), 
                         'Amount exceeds available reserve limit' 
                     );
                     require(
-                        amount.mul(grantReserveExchangeRate).div(1e6) <= _overallBalance2().mul(grantTransactionMaxPercent).div(100),
+                        amount.mul(claimReserveExchangeRate).div(1e6) <= _overallBalance2().mul(claimTransactionMaxPercent).div(100),
                         'Amount exceeds transaction max percent' 
                     );
                     
                     require(
-                        ((grantTotal).mul(grantReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= grantDeficitMax,
+                        ((claimTotal).mul(claimReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= claimDeficitMax,
                         'Amount exceeds deficit max'
                     );
             
                 }
                
-                require(tokensGrantOneTimeLimit >= amount, 'Too many tokens to grant in one transaction');
+                require(tokensClaimOneTimeLimit >= amount, 'Too many tokens to claim in one transaction');
                 
                 
                 // try to get
                 bool success = IERC20(tokensForClaiming[i]).transferFrom(_msgSender(), address(this), allowedAmount);
                 require(success == true, 'Transfer tokens were failed'); 
                 
-                // grant own tokens
+                // claim own tokens
                 _mint(_msgSender(), amount);
                 
                 //
-                addGrantLimit(_msgSender(), amount, block.number.add(grantLockupUntilBlockDiff), grantGradual);
+                addClaimLimit(_msgSender(), amount, now.add(claimLockupPeriod), claimGradual);
             }
         }
         require(hasAllowedAmount == true, 'Amount exceeds allowed balance');

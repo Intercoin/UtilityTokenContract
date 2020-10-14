@@ -6,6 +6,7 @@ const ERC20MintableToken = artifacts.require("ERC20Mintable");
 const ERC20MintableToken2 = artifacts.require("ERC20Mintable");
 const UtilityTokenFactory = artifacts.require("UtilityTokenFactory");
 const truffleAssert = require('truffle-assertions');
+const helper = require("../helpers/truffleTestHelper");
 //0x0000000000000000000000000000000000000000
 contract('UtilityToken', (accounts) => {
     
@@ -80,7 +81,7 @@ contract('UtilityToken', (accounts) => {
             "Amount exceeds allowed balance"
         );
     });
- 
+
     it('should revert claim if it wasn\'t added TokenForClaiming before', async () => {
         // setup
         const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
@@ -137,42 +138,38 @@ contract('UtilityToken', (accounts) => {
         );
 
     });    
-
+/*
     it('checking transfer limit none-gradual', async () => {
         // setup
         const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
         const utilityTokenMockInstance = await UtilityTokenMock.new('t1','t1', ERC20MintableToken2Instance.address);
-        await utilityTokenMockInstance.setGrantGradual(false, { from: accountTwo });
+        await utilityTokenMockInstance.setClaimGradual(false, { from: accountTwo });
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
-        const countBlocksNeedToPass = 100;
+        const countSecondsNeedToPass = 10;
+        await utilityTokenMockInstance.setClaimLockupPeriod(countSecondsNeedToPass, { from: accountTwo });
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
     
         // Make grant from first account to second. for 100 blocks and gradual = false
-        // Note that currentBlockInfo - its block before for transaction below !!!  so plus 1 needed
-        const startBlockNumber = currentBlockInfo.number+1;
-        
+
         // claim mechanizm
         await utilityTokenMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
         await ERC20MintableTokenInstance.approve(utilityTokenMockInstance.address, '0x'+grantAmount, { from: accountTwo });
         await utilityTokenMockInstance.claim({ from: accountTwo });
         //----------------
-        //await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, false, { from: accountOne });
         
         // one block spent for transaction before so 
-        // emulate skipping countBlocksNeedToPass-2 block
-        for (let i = 0; i < countBlocksNeedToPass-2; i++) {
-            await utilityTokenMockInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
-        }
+        // emulate skipping countSecondsNeedToPass-2 seconds
+        await helper.advanceTimeAndBlock(countSecondsNeedToPass/2);
         
         // for now passed block spent countBlocksNeedToPass-1
         await truffleAssert.reverts(
             utilityTokenMockInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo }), 
             "TransferLimit: There are no allowance tokens to transfer"
         );
-        // after this block passed by 1
-        await utilityTokenMockInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
+        // after this block passed by 2 second
+        await helper.advanceTimeAndBlock(countSecondsNeedToPass/2);
         // and transfer have to be available for account two
         await utilityTokenMockInstance.transfer(accountThree, '0x'+grantAmount, { from: accountTwo });
         
@@ -182,37 +179,34 @@ contract('UtilityToken', (accounts) => {
         // );
 
     }); 
-     
+  
     it('checking transfer limit gradual', async () => {
         // setup
         const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
-        const utilityTokenInstance = await UtilityToken.new('t1','t1', ERC20MintableToken2Instance.address);
+        const utilityTokenMockInstance = await UtilityTokenMock.new('t1','t1', ERC20MintableToken2Instance.address);
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
-        const countBlocksNeedToPass = 100;
+        const countSecondsNeedToPass = 10;
+        await utilityTokenMockInstance.setClaimLockupPeriod(countSecondsNeedToPass, { from: accountTwo });
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
 
-        // Make grant from first account to second. for 100 blocks and gradual = true
-        // Note that currentBlockInfo - its block before for transaction below !!!  so plus 1 needed
-        const startBlockNumber = currentBlockInfo.number+1;
-        
+        // Make grant from first account to second. for 100 seconds and gradual = true
+
         // claim mechanizm
-        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
-        await ERC20MintableTokenInstance.approve(utilityTokenInstance.address, '0x'+grantAmount, { from: accountTwo });
-        await utilityTokenInstance.claim({ from: accountTwo });
+        await ERC20MintableTokenInstance.approve(utilityTokenMockInstance.address, '0x'+grantAmount, { from: accountTwo });
+        await utilityTokenMockInstance.claim({ from: accountTwo });
         //await utilityTokenETHOnlyInstance.grant(accountTwo, '0x'+grantAmount, startBlockNumber+countBlocksNeedToPass, true, { from: accountOne });
 
         // one block spent for transaction before so 
-        // emulate skipping countBlocksNeedToPass/2-2 block
-        for (let i = 0; i < countBlocksNeedToPass/2-2; i++) {
-            await utilityTokenInstance.setMaxGasPrice('0x'+(1*10**18).toString(16),{ from: accountOne });    
-        }
+        // emulate skipping countBlocksNeedToPass/2 seconds
+        await helper.advanceTimeAndBlock(countSecondsNeedToPass/2);
 
-        var lockupForNow = (await utilityTokenInstance.amountLockUp.call(accountTwo));
+        var lockupForNow = (await utilityTokenMockInstance.amountLockUp.call(accountTwo));
 
-        var passedBloсkForNow = countBlocksNeedToPass/2-2; // 3 blocks
-        var expectedLockup = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countBlocksNeedToPass,10)).mul(new BN(passedBloсkForNow,10));
+        var passedSecondsForNow = countSecondsNeedToPass/2;
+        var expectedLockup = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countSecondsNeedToPass,10)).mul(new BN(passedSecondsForNow,10));
         assert.equal(
             lockupForNow.toString(16), 
             expectedLockup.toString(16), 
@@ -220,26 +214,27 @@ contract('UtilityToken', (accounts) => {
             );
 
 
-        var lockupForNowNextBlock = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countBlocksNeedToPass,10)).mul(new BN(passedBloсkForNow+1,10));
+        var lockupForNowNextBlock = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countSecondsNeedToPass,10)).mul(new BN(passedSecondsForNow,10));
         // now try to transfer for 1 wei more than (grantAmount-lockupForNowNextBlock)
         await truffleAssert.reverts(
-            utilityTokenInstance.transfer(accountThree, '0x'+(new BN(grantAmount.toString(16),16).sub(new BN(lockupForNowNextBlock.toString(16),16)).add(new BN(1,10))).toString(16), { from: accountTwo }), 
+            utilityTokenMockInstance.transfer(accountThree, '0x'+(new BN(grantAmount.toString(16),16).sub(new BN(lockupForNowNextBlock.toString(16),16)).add(new BN(1,10))).toString(16), { from: accountTwo }), 
             "TransferLimit: There are no allowance tokens to transfer"
         );
-
-        // 1 block passed by revert
-        passedBloсkForNow = passedBloсkForNow + 1;
+  
+        await helper.advanceTimeAndBlock(countSecondsNeedToPass/2);
         
+        passedSecondsForNow = countSecondsNeedToPass;
+
         // and transfer have to be available for account two
-        expectedLockup = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countBlocksNeedToPass,10)).mul(new BN(passedBloсkForNow,10));
-        lockupForNow = (await utilityTokenInstance.amountLockUp.call(accountTwo));
+        expectedLockup = (new BN(grantAmount,16))-(new BN(grantAmount,16)).div(new BN(countSecondsNeedToPass,10)).mul(new BN(passedSecondsForNow,10));
+        lockupForNow = (await utilityTokenMockInstance.amountLockUp.call(accountTwo));
         
         assert.equal(new BN(lockupForNow,16).toString(16), expectedLockup.toString(16), "LockUp does not  equal to expected");
         
-        await utilityTokenInstance.transfer(accountThree, '0x'+((new BN(grantAmount.toString(16),16)).sub(new BN(expectedLockup.toString(16),16))).toString(16), { from: accountTwo }); 
+        await utilityTokenMockInstance.transfer(accountThree, '0x'+((new BN(grantAmount.toString(16),16)).sub(new BN(expectedLockup.toString(16),16))).toString(16), { from: accountTwo }); 
 
     });      
-
+*/
     it('should add/remove to/from whitelist ', async () => {
         const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
         const utilityTokenInstance = await UtilityToken.new('t1','t1',ERC20MintableToken2Instance.address);
@@ -379,7 +374,7 @@ contract('UtilityToken', (accounts) => {
             filter: {addr: accountOne}, // Using an array in param means OR: e.g. 20 or 23
             fromBlock: 0,
             toBlock: 'latest'
-        }, function(error, events){ /* console.log(events);*/ })
+        }, function(error, events){  })
         .then(function(events){
             
             utilityTokenAddress = events[0].returnValues['utilityToken'];
@@ -391,4 +386,5 @@ contract('UtilityToken', (accounts) => {
         assert.equal(owner, accountOne, 'owner is not accountOne');
         
     });
+
 });
