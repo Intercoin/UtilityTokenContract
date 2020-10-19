@@ -1,7 +1,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 
-import "./openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./UtilityToken.sol";
+import "../openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../UtilityToken.sol";
 
 contract UtilityTokenFactory is Ownable{
     
