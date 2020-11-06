@@ -24,7 +24,7 @@ contract UtilityTokenETHOnly is UtilityBase {
     /**
      * Used for donate ETH without receiving token
      */
-    function donateETH() public payable validGasPrice {
+    function donateETH() public payable validGasPrice nonReentrant() {
     }
 
 

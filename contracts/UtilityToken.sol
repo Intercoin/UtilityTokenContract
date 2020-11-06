@@ -41,7 +41,7 @@ contract UtilityToken is UtilityBase {
      * proceeded if user set allowance in secondary_token contract
      * @param isDonate if set true, contract will not send tokens
      */
-    function receiveERC20Token2(bool isDonate) validGasPrice public {
+    function receiveERC20Token2(bool isDonate) validGasPrice public nonReentrant() {
         uint256 _allowedAmount = IERC20(token2).allowance(_msgSender(), address(this));
         
         require(_allowedAmount > 0, 'Amount exceeds allowed balance');

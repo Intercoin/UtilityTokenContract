@@ -1,15 +1,14 @@
 pragma solidity >=0.6.0 <0.7.0;
 
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol";
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "./openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "./openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import "./Whitelist.sol";
 import "./CommonConstants.sol";
 import "./Claimed.sol";
 
-contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed {
+contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
     
@@ -119,7 +118,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed {
     }
     
     
-    function claimingTokensWithdraw() public onlyOwner {
+    function claimingTokensWithdraw() public onlyOwner nonReentrant() {
         
         for (uint256 i = 0; i < tokensForClaimingCount; i++) {
             uint256 amount = IERC20(tokensForClaiming[i]).balanceOf(address(this));
@@ -135,7 +134,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed {
     /**
      * @dev getting own tokens instead claimed tokens
      */
-    function claim() validGasPrice public {
+    function claim() validGasPrice public nonReentrant() {
         
         require(tokensForClaimingCount > 0, 'There are no allowed tokens for claiming');
         
@@ -206,7 +205,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed {
      * @param amount amount
      * @return success
      */
-    function transfer(address recipient, uint256 amount) public onlyPassTransferLimit(amount) virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount) public onlyPassTransferLimit(amount) nonReentrant() virtual override returns (bool) {
       
         _transfer(_msgSender(), recipient, amount);
         
