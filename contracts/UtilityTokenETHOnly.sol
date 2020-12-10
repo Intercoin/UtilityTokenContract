@@ -4,9 +4,6 @@ import "./UtilityBase.sol";
 
 contract UtilityTokenETHOnly is UtilityBase {
     
-    uint256 private _sellExchangeRate = 99e4; // 99% * 1e6
-    uint256 private _buyExchangeRate = 100e4; // 100% *1e6
-    
     /**
      * @param name Token name
      * @param symbol Token symbol
@@ -19,6 +16,10 @@ contract UtilityTokenETHOnly is UtilityBase {
         UtilityBase(name, symbol) 
         public 
     {
+        // override variables can be here
+        claimLockupPercent = 50e4;
+        _sellExchangeRate = 50e4;
+        // ------------------------------
     }
     
     /**
@@ -31,7 +32,7 @@ contract UtilityTokenETHOnly is UtilityBase {
     /**
      * @dev overall balance (in this case - eth)
      */
-    function _overallBalance2() internal virtual override returns(uint256) {
+    function _overallBalance2() internal view virtual override returns(uint256) {
         return address(this).balance;
     }
     
@@ -54,22 +55,6 @@ contract UtilityTokenETHOnly is UtilityBase {
         //_mint(_msgSender(), amount2send);
         _mintedOwnTokens(ethAmount);
     }  
-    
-    /**
-     * @dev sell exchange rate
-     * @return rate multiplied at 1e6
-     */
-    function sellExchangeRate() internal virtual override returns(uint256) {
-        return _sellExchangeRate;
-    }
-    
-    /**
-     * @dev buy exchange rate
-     * @return rate multiplied at 1e6
-     */
-    function buyExchangeRate() internal virtual  override returns(uint256) {
-        return _buyExchangeRate;
-    }
     
 }
 

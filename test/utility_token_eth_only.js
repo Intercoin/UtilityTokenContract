@@ -274,7 +274,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
     });
     
     it('should exchange Token/ETH', async () => {
-        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
         const amountETHSendToContract = 10*10**18; // 10ETH
         
         
@@ -303,9 +303,11 @@ contract('UtilityTokenETHOnly', (accounts) => {
             (new BN(instanceETHEndingBalance, 10)).toString(16),
             'Сontract does not receive eth'
         );
-        const sellExchangeRate = 99;
-        const buyExchangeRate = 100;
-        
+        let sellExchangeRate = await utilityTokenETHOnlyInstance.getSellExchangeRate();
+        let buyExchangeRate = await utilityTokenETHOnlyInstance.getBuyExchangeRate();
+        sellExchangeRate = ((new BN(sellExchangeRate+'',10)).div(new BN(10000+'',10))).toString(10);
+        buyExchangeRate = ((new BN(buyExchangeRate+'',10)).div(new BN(10000+'',10))).toString(10);
+
         assert.equal(
             (new BN(amountETHSendToContract+'',10).mul(new BN(buyExchangeRate+'',10)).div(new BN(100+'',10))).toString(16), 
             (new BN(accountTwoTokenEndingBalance, 10)).toString(16),
@@ -368,7 +370,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
             
             utilityTokenETHOnlyAddress = events[0].returnValues['utilityTokenETHOnly'];
         });
-        console.log(utilityTokenETHOnlyAddress);
+        //console.log(utilityTokenETHOnlyAddress);
         
         let utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.at(utilityTokenETHOnlyAddress);
         

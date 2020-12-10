@@ -5,9 +5,6 @@ import "./UtilityBase.sol";
 contract UtilityToken is UtilityBase {
     using Address for address;
     
-    uint256 private _sellExchangeRate = 99e4; // 99% * 1e6
-    uint256 private _buyExchangeRate = 100e4; // 100% *1e6
-    
     address private token2;
     
     /**
@@ -26,6 +23,9 @@ contract UtilityToken is UtilityBase {
     {
         require(secondary_token.isContract(), 'secondary_token must be a contract address');
         token2 = secondary_token;
+        
+        // override variables can be here
+        // ------------------------------
     }
     
     // 
@@ -65,7 +65,7 @@ contract UtilityToken is UtilityBase {
     /**
      * @dev overall tokens(token2) balance of this contract
      */
-    function _overallBalance2() internal virtual override returns(uint256) {
+    function _overallBalance2() internal view virtual override returns(uint256) {
         return IERC20(token2).balanceOf(address(this));
     }
     
@@ -76,21 +76,6 @@ contract UtilityToken is UtilityBase {
         _mintedOwnTokens(token2Amount);
     }  
     
-    /**
-     * @dev sell exchange rate
-     * @return rate multiplied at 1e6
-     */
-    function sellExchangeRate() internal virtual override returns(uint256) {
-        return _sellExchangeRate;
-    }
-    
-    /**
-     * @dev buy exchange rate
-     * @return rate multiplied at 1e6
-     */
-    function buyExchangeRate() internal virtual  override returns(uint256) {
-        return _buyExchangeRate;
-    }  
-    
+   
 }
 

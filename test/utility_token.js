@@ -281,7 +281,7 @@ contract('UtilityToken', (accounts) => {
 
     it('should exchange Token/Token2', async () => {
         const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
-        const utilityTokenInstance = await UtilityToken.new('t1','t1',ERC20MintableToken2Instance.address);
+        const utilityTokenInstance = await UtilityTokenMock.new('t1','t1',ERC20MintableToken2Instance.address);
         const amountT2SendToContract = (10*10**18).toString(16);; // 10 token2
         
         
@@ -312,8 +312,11 @@ contract('UtilityToken', (accounts) => {
             'Сontract does not receive token2'
         );
         
-        const sellExchangeRate = 99;
-        const buyExchangeRate = 100;
+        let sellExchangeRate = await utilityTokenInstance.getSellExchangeRate();
+        let buyExchangeRate = await utilityTokenInstance.getBuyExchangeRate();
+        sellExchangeRate = ((new BN(sellExchangeRate+'',10)).div(new BN(10000+'',10))).toString(10);
+        buyExchangeRate = ((new BN(buyExchangeRate+'',10)).div(new BN(10000+'',10))).toString(10);
+
         
         assert.equal(
             (new BN(amountT2SendToContract+'',16).mul(new BN(buyExchangeRate+'',16)).div(new BN(100+'',16))).toString(16), 

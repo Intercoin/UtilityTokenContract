@@ -16,10 +16,10 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     uint256 startTime;
     
-    uint256 constant claimMorePerSeconds = 10 * DECIMALS;
+    uint256 claimMorePerSeconds = 10 * DECIMALS;
 
     // initial amount that can be claimed by contract without transactions failing
-    uint256 constant claimInitialMax = 1000000 * DECIMALS;
+    uint256 claimInitialMax = 1000000 * DECIMALS;
     
     // amount that can be claimed one-time by contract without transactions failing
     uint256 tokensClaimOneTimeLimit = 1000000 * DECIMALS;
@@ -34,7 +34,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     // deficit = token1outstanding * exchangeRate - token2balance . 
     // claim fails if claimDeficitMax exceeds this number.
-    uint256 constant claimDeficitMax = 1000000 * DECIMALS;
+    uint256 claimDeficitMax = 1000000 * DECIMALS;
     
     // claim discount
     uint256 claimReserveExchangeRate = 99e4;
@@ -44,11 +44,16 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     // default variable for claim permissions
     uint256 claimLockupPeriod = 100; // seconds
+    uint256 claimLockupPercent = 100e4; // percent mul by 1e6  default is 100%
+    
     bool claimGradual = true;
     
     uint256 private tokensForClaimingCount = 0;
     address[] private tokensForClaiming;
     mapping (address => bool) private tokensForClaimingMap;
+    
+    uint256 internal _sellExchangeRate = 99e4; // 99% * 1e6
+    uint256 internal _buyExchangeRate = 100e4; // 100% *1e6
     
     modifier onlyPassTransferLimit(uint256 amount) {
         
@@ -187,7 +192,8 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
                 _mint(_msgSender(), amount);
                 
                 //
-                addClaimLimit(_msgSender(), amount, now.add(claimLockupPeriod), claimGradual);
+                
+                addClaimLimit(_msgSender(), amount.mul(claimLockupPercent).div(1e6), now.add(claimLockupPeriod), claimGradual);
             }
         }
         require(hasAllowedAmount == true, 'Amount exceeds allowed balance');
@@ -217,7 +223,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         return true;
     }
     
-    function _overallBalance2() internal virtual returns(uint256) {
+    function _overallBalance2() internal view virtual returns(uint256) {
         // need to be implement in child
         return 0;
     }
@@ -250,14 +256,23 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         // need to be implement in child
     }  
     
-    function sellExchangeRate() internal virtual returns(uint256) {
-        // need to be implement in child
-        return uint256(1e6);
+     /**
+     * @dev sell exchange rate
+     * @return rate multiplied at 1e6
+     */
+    function sellExchangeRate() internal view returns(uint256) {
+        return _sellExchangeRate;
     }
-    function buyExchangeRate() internal virtual returns(uint256) {
-        // need to be implement in child
-        return uint256(1e6);
+    
+    /**
+     * @dev buy exchange rate
+     * @return rate multiplied at 1e6
+     */
+    function buyExchangeRate() internal view returns(uint256) {
+        return _buyExchangeRate;
     }  
+    
+    
     function _mintedOwnTokens(uint256 amount) internal {
         uint256 amount2mint = amount.mul(buyExchangeRate()).div(1e6); // "buy exchange" interpretation with rate 100%
         _mint(_msgSender(), amount2mint);
