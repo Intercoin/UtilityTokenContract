@@ -8,7 +8,7 @@ name  | type | description
 --|--|--
 name|string|name utility token. see ERC20 interface
 symbol|string|symbol utility token. see ERC20 interface
-secondary_token|address|address for external token. used only in UtilityToken.sol
+reserveToken|address|address for external token. used only in UtilityToken.sol
 
 # Overview
 once installed will be use methods to exchange
@@ -26,9 +26,91 @@ claimTransactionMaxPercent|uint256|2| claim fails if token1beingSent * exchangeR
 claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (token1outstanding * exchangeRate - token2balance)
 claimReserveExchangeRate|uint256|99e4| 99% mul 1e6
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
+claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim
 claimGradual|bool|true| if true then limit is gradually decreasing
 
+
 ## Methods
+
+<table>
+<thead>
+	<tr>
+		<th>method name</th>
+		<th>called by</th>
+        <th>contract</th>
+		<th>description</th>
+	</tr>
+</thead>
+<tbody>
+    <tr>
+		<td><a href="#receiveerc20token2">receiveERC20Token2</a></td>
+		<td>anyone</td>
+        <td>UtilityToken.sol</td>
+		<td>method received Token2.</td>
+	</tr>
+	<tr>
+		<td><a href="#receive">receive</a></td>
+		<td>anyone</td>
+        <td>UtilityToken.sol</td>
+		<td>internal method triggered if contract getting ETH.<br><b>but is not supported and through an exception</b></td>
+	</tr>
+    <tr>
+		<td><a href="#donateeth">donateETH</a></td>
+		<td>anyone</td>
+        <td>UtilityTokenETHOnly.sol</td>
+		<td>Method used for donate ETH without receiving token</td>
+	</tr>
+	<tr>
+		<td><a href="#receive-1">receive</a></td>
+		<td>anyone</td>
+        <td>UtilityTokenETHOnly.sol</td>
+		<td>internal method triggered if contract getting ETH</td>
+	</tr>
+	<tr>
+		<td><a href="#setmaxgasprice">setMaxGasPrice</a></td>
+		<td>owner</td>
+        <td>boths</td>
+		<td>setting Gas Price(in wei) used for transactions</td>
+	</tr>
+	<tr>
+		<td><a href="#claimingtokenadd">claimingTokenAdd</a></td>
+		<td>owner</td>
+        <td>boths</td>
+		<td>method add token for claiming</td>
+	</tr>
+	<tr>
+		<td><a href="#claimingtokensview">claimingTokensView</a></td>
+		<td>anyone</td>
+        <td>boths</td>
+		<td>returned list of claiming tokens</td>
+	</tr>
+	<tr>
+		<td><a href="#claimingtokenswithdraw">claimingTokensWithdraw</a></td>
+		<td>owner</td>
+        <td>boths</td>
+		<td>method to withdraw all claiming tokens</td>
+	</tr>
+    <tr>
+		<td><a href="#claim">claim</a></td>
+		<td>anyone</td>
+        <td>boths</td>
+		<td>getting own tokens instead claimed tokens</td>
+	</tr>
+    <tr>
+		<td><a href="#transfer">transfer</a></td>
+		<td>anyone</td>
+        <td>boths</td>
+        <td>Overrode {ERC20-transfer} method. with <a href="#transfer">rectrictions</a></td>
+	</tr>
+    <tr>
+		<td><a href="#amountlockup">amountLockUp</a></td>
+		<td>anyone</td>
+        <td>boths</td>
+        <td>Calculate amount of tokens need to be left at recipient's account</td>
+	</tr>
+</tbody>
+</table>
+
 ### for UtilityToken.sol only
 #### receiveERC20Token2
 method received Token2.

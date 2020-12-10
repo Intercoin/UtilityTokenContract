@@ -10,19 +10,19 @@ contract UtilityToken is UtilityBase {
     /**
      * @param name Token name
      * @param symbol Token symbol
-     * @param secondary_token SecondaryToken address instead ETH
+     * @param reserveToken ReserveToken address instead ETH
      * 
      */
     constructor (
         string memory name, 
         string memory symbol,
-        address secondary_token
+        address reserveToken
     ) 
         UtilityBase(name, symbol) 
         public 
     {
-        require(secondary_token.isContract(), 'secondary_token must be a contract address');
-        token2 = secondary_token;
+        require(reserveToken.isContract(), 'secondary_token must be a contract address');
+        token2 = reserveToken;
         
         // override variables can be here
         // ------------------------------
@@ -38,7 +38,7 @@ contract UtilityToken is UtilityBase {
 
     /**
      * @dev getting token2 and mint instead own tokens
-     * proceeded if user set allowance in secondary_token contract
+     * proceeded if user set allowance in reserveToken contract
      * @param isDonate if set true, contract will not send tokens
      */
     function receiveERC20Token2(bool isDonate) validGasPrice public nonReentrant() {
