@@ -24,7 +24,7 @@ tokensGrantOneTimeLimit|uint256|1000000*DECIMALS|amount that can be claimed one-
 claimReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
 claimTransactionMaxPercent|uint256|2| claim fails if token1beingSent * exchangeRate > token2balance * this number / 100
 claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (token1outstanding * exchangeRate - token2balance)
-claimReserveExchangeRate|uint256|99e4| 99% mul 1e6
+claimExchangeRate|uint256|99e4| 99% mul 1e6
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
 claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim
 claimGradual|bool|true| if true then limit is gradually decreasing

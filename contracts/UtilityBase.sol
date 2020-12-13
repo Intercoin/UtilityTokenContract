@@ -37,7 +37,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     uint256 claimDeficitMax = 1000000 * DECIMALS;
     
     // claim discount
-    uint256 claimReserveExchangeRate = 99e4;
+    uint256 claimExchangeRate = 99e4;
     
     // total claimed
     uint256 claimTotal = 0;
@@ -181,16 +181,16 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
                         'This many tokens are not available to be claimed yet' 
                     );
                     require(
-                        claimTotal.mul(claimReserveExchangeRate).div(1e6) <= _overallBalance2().mul(100-claimReserveMinPercent).div(100), 
+                        claimTotal.mul(claimExchangeRate).div(1e6) <= _overallBalance2().mul(100-claimReserveMinPercent).div(100), 
                         'Amount exceeds available reserve limit' 
                     );
                     require(
-                        amount.mul(claimReserveExchangeRate).div(1e6) <= _overallBalance2().mul(claimTransactionMaxPercent).div(100),
+                        amount.mul(claimExchangeRate).div(1e6) <= _overallBalance2().mul(claimTransactionMaxPercent).div(100),
                         'Amount exceeds transaction max percent' 
                     );
                     
                     require(
-                        ((claimTotal).mul(claimReserveExchangeRate).div(1e6)).sub(_overallBalance2()) <= claimDeficitMax,
+                        ((claimTotal).mul(claimExchangeRate).div(1e6)).sub(_overallBalance2()) <= claimDeficitMax,
                         'Amount exceeds deficit max'
                     );
             
