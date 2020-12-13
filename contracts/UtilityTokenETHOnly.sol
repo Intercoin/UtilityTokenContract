@@ -17,8 +17,18 @@ contract UtilityTokenETHOnly is UtilityBase {
         public 
     {
         // override variables can be here
-        claimLockupPercent = 50e4;
+        claimLockupPercent = 100e4;
         _sellExchangeRate = 50e4;
+        
+        
+        _buyExchangeRate = 10000e4; // 1000%   1Eth == 100ITRF
+        _sellExchangeRate = 1e4; // 1% 1IRTF = 0.01eth
+
+        claimReserveMinPercent = 50;
+        claimTransactionMaxPercent = 2;
+        claimExchangeRate = 100e4;
+        claimLockupPeriod = 8640000;// 100 days
+        claimGradual = true;
         // ------------------------------
     }
     
