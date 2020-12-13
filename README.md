@@ -114,7 +114,6 @@ reserveTokenLimitPerDay|uint256|20e4| limit for reserve token
         <td>boths</td>
         <td>Adding addresses list to whitelist</td>
 	</tr>
-	
     <tr>
 		<td><a href="#whitelistremove">whitelistRemove</a></td>
 		<td>owner</td>
