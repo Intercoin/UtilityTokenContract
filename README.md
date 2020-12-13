@@ -28,7 +28,7 @@ claimExchangeRate|uint256|99e4| 99% mul 1e6
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
 claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim
 claimGradual|bool|true| if true then limit is gradually decreasing
-ReserveTokenLimitPerDay|uint256|20e4| limit for reserve token
+reserveTokenLimitPerDay|uint256|20e4| limit for reserve token
 
 ## Methods
 
@@ -108,7 +108,6 @@ ReserveTokenLimitPerDay|uint256|20e4| limit for reserve token
         <td>boths</td>
         <td>Calculate amount of tokens need to be left at recipient's account</td>
 	</tr>
-	
     <tr>
 		<td><a href="#whitelistadd">whitelistAdd</a></td>
 		<td>owner</td>
@@ -128,7 +127,6 @@ ReserveTokenLimitPerDay|uint256|20e4| limit for reserve token
         <td>boths</td>
         <td>Checks if a address already exists in a whitelist</td>
 	</tr>
-	
 </tbody>
 </table>
 
