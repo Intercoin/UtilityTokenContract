@@ -108,6 +108,27 @@ ReserveTokenLimitPerDay|uint256|20e4| limit for reserve token
         <td>boths</td>
         <td>Calculate amount of tokens need to be left at recipient's account</td>
 	</tr>
+	
+    <tr>
+		<td><a href="#whitelistadd">whitelistAdd</a></td>
+		<td>owner</td>
+        <td>boths</td>
+        <td>Adding addresses list to whitelist</td>
+	</tr>
+	
+    <tr>
+		<td><a href="#whitelistremove">whitelistRemove</a></td>
+		<td>owner</td>
+        <td>boths</td>
+        <td>Removing addresses list from whitelist</td>
+	</tr>
+	<tr>
+		<td><a href="#iswhitelisted">isWhitelisted</a></td>
+		<td>anyone</td>
+        <td>boths</td>
+        <td>Checks if a address already exists in a whitelist</td>
+	</tr>
+	
 </tbody>
 </table>
 
@@ -180,6 +201,12 @@ Params:
 name  | type | description
 --|--|--
 _addresses|address[]|array of addresses which need to be removed from whitelist
+
+#### isWhitelisted
+Params:
+name  | type | description
+--|--|--
+addr|address|address which need to be check
 
 # Examples
 contract can be used in two ways:

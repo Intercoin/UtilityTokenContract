@@ -22,7 +22,7 @@ contract Whitelist is Ownable {
     }
     
     /**
-     * Adding address list to whitelist 
+     * Adding addresses list to whitelist 
      * 
      * @dev available to Owner only
      * Requirements:
@@ -41,7 +41,7 @@ contract Whitelist is Ownable {
     }
     
     /**
-     * Removing address list from whitelist
+     * Removing addresses list from whitelist
      * 
      * @dev Available to Owner only
      * Requirements:
