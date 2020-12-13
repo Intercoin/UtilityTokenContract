@@ -28,7 +28,7 @@ claimReserveExchangeRate|uint256|99e4| 99% mul 1e6
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
 claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim
 claimGradual|bool|true| if true then limit is gradually decreasing
-
+ReserveTokenLimitPerDay|uint256|20e4| limit for reserve token
 
 ## Methods
 
@@ -130,11 +130,14 @@ Params:
 name  | type | description
 --|--|--
 gasPrice|uint256|maximum Gas Price(in wei) used for transaction
+
 #### claimingTokenAdd
 Params:
 name  | type | description
 --|--|--
 tokenForClaiming|address| added token for claiming
+fraction|uint256| fraction
+
 #### claimingTokensView
 Returned list of claimng tokens
 

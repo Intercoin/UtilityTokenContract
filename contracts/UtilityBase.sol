@@ -50,7 +50,7 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     uint256 private tokensForClaimingCount = 0;
     address[] private tokensForClaiming;
-    mapping (address => bool) private tokensForClaimingMap;
+    mapping (address => uint256) private tokensForClaimingMap;
     
     uint256 internal _sellExchangeRate = 99e4; // 99% * 1e6
     uint256 internal _buyExchangeRate = 100e4; // 100% *1e6
@@ -106,14 +106,19 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         maxGasPrice = gasPrice;
     }
     
-    function claimingTokenAdd(address tokenForClaiming) public onlyOwner {
+    /**
+     * @param tokenForClaiming address of claiming token
+     * @param fraction percent that we can claim from participant. mul by 1e6
+     * so 50% is 50e4
+     */
+    function claimingTokenAdd(address tokenForClaiming, uint256 fraction) public onlyOwner {
         require(tokenForClaiming.isContract(), 'tokenForClaiming must be a contract address');
-        if (tokensForClaimingMap[tokenForClaiming]) {
+        if (tokensForClaimingMap[tokenForClaiming] != 0) {
             // already exist
         } else {
             tokensForClaiming.push(tokenForClaiming);
             tokensForClaimingCount = tokensForClaimingCount.add(1);
-            tokensForClaimingMap[tokenForClaiming] = true;
+            tokensForClaimingMap[tokenForClaiming] = fraction;
             emit claimingTokenAdded(tokenForClaiming);
         }
     }
@@ -151,9 +156,16 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         for (uint256 i = 0; i < tokensForClaimingCount; i++) {
         
             uint256 allowedAmount = IERC20(tokensForClaiming[i]).allowance(_msgSender(), address(this));
+            uint256 senderBalance = IERC20(tokensForClaiming[i]).balanceOf(_msgSender());
+            
             
             if (allowedAmount > 0) {
             
+                require (
+                    (allowedAmount.mul(1e6)).div(senderBalance) <= tokensForClaimingMap[tokensForClaiming[i]],
+                    'Amount exceeds available claiming rates limit.'
+                );
+        
                 hasAllowedAmount = true;
                 
                 // own token with rate 1to1

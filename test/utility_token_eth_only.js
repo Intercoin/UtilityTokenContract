@@ -14,6 +14,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
     const accountOne = accounts[0];
     const accountTwo = accounts[1];  
     const accountThree = accounts[2];  
+    const claimingRates = 500000; //50e4
 
     it('should deployed correctly with correctly owner', async () => {
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.new('t1','t1');
@@ -39,16 +40,16 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
         
         await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountTwo }), 
+            utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountTwo }), 
             "Ownable: caller is not the owner."
         );
         
         await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.claimingTokenAdd(accountThree, { from: accountOne }), 
+            utilityTokenETHOnlyInstance.claimingTokenAdd(accountThree, claimingRates, { from: accountOne }), 
             "tokenForClaiming must be a contract address"
         );
         // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountOne });
         
         let list = (await utilityTokenETHOnlyInstance.claimingTokensView({ from: accountOne }));
         
@@ -66,7 +67,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const grantAmount = (10*10**18).toString(16);
         
         // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -106,28 +107,40 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
         const currentBlockInfo = await web3.eth.getBlock("latest");
         const grantAmount = (10*10**18).toString(16);
+        const claimCorrectRateAmount = (5*10**18).toString(16);
      
          // Get initial balances of second account.
         const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
         
          // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
         
-        //make approve
+        //make approve with exceed rate
         await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+grantAmount, { from: accountTwo });
+
+        // claim()
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "Amount exceeds available claiming rates limit."
+        );
         
+        // now approve correctly
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+claimCorrectRateAmount, { from: accountTwo });
+
         // claim()
         await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
+        
+        ///////////////
         
         // Get balances of first and second account after the transactions.
         const accountTwoEndingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
 
         assert.equal(
             new BN(accountTwoEndingBalance,16).toString(16),
-            (new BN(accountTwoStartingBalance,16)).add(new BN(grantAmount,16)).toString(16), 
+            (new BN(accountTwoStartingBalance,16)).add(new BN(claimCorrectRateAmount,16)).toString(16), 
             "Amount wasn't correctly sent to the receiver"
         );
 
@@ -149,7 +162,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
 
         // claim mechanizm
-        await utilityTokenETHOnlyMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenETHOnlyMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountOne });
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
         await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyMockInstance.address, '0x'+grantAmount, { from: accountTwo });
         await utilityTokenETHOnlyMockInstance.claim({ from: accountTwo });
@@ -190,7 +203,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
 
 
         // claim mechanizm
-        await utilityTokenETHOnlyMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, { from: accountOne });
+        await utilityTokenETHOnlyMockInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, claimingRates, { from: accountOne });
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
         await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyMockInstance.address, '0x'+grantAmount, { from: accountTwo });
 
