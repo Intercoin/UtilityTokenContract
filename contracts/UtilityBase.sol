@@ -55,6 +55,9 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     uint256 internal _sellExchangeRate = 99e4; // 99% * 1e6
     uint256 internal _buyExchangeRate = 100e4; // 100% *1e6
     
+    uint256 reserveTokenLimitPerDay = 20e4; // 20% * 1e6
+    mapping (address => uint256) lastObtainedReserveToken;
+    
     modifier onlyPassTransferLimit(uint256 amount) {
         
          require(
@@ -213,10 +216,13 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
      */
     function transfer(address recipient, uint256 amount) public onlyPassTransferLimit(amount) nonReentrant() virtual override returns (bool) {
       
+        uint256 senderBalanceBefore =  balanceOf(_msgSender());
         _transfer(_msgSender(), recipient, amount);
         
         if (recipient == address(this)) {
-            _receivedToken(amount);
+            
+            
+            _receivedToken(amount, senderBalanceBefore);
             _burn(address(this), amount);
         }
         
@@ -233,11 +239,25 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
      * Available only to recipient in whitelist
      * @param tokensAmount tokens amount
      */
-    function _receivedToken(uint256 tokensAmount) internal onlyWhitelist {
+    function _receivedToken(uint256 tokensAmount, uint256 tokensBalanceBefore) internal onlyWhitelist {
         
         uint256 balanceToken2 = _overallBalance2();
         uint256 amount2send = tokensAmount.mul(sellExchangeRate()).div(1e6); // "sell exchange" interpretation with rate discount
         require ((amount2send <= balanceToken2 && balanceToken2>0), 'Amount exceeds available balance.');
+        
+        require (
+            (now.sub(lastObtainedReserveToken[_msgSender()]) >= 86400),
+            'Available only one time in 24h.'
+        );
+        require (
+            (tokensAmount.mul(1e6)).div(tokensBalanceBefore) <= reserveTokenLimitPerDay,
+            'Amount exceeds available reserve token limit.'
+        );
+        
+        lastObtainedReserveToken[_msgSender()] = now;
+
+        
+        
         
         _receivedTokenAfter(amount2send);
         

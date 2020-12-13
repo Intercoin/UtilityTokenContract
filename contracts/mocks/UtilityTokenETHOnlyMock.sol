@@ -41,6 +41,9 @@ contract UtilityTokenETHOnlyMock is UtilityTokenETHOnly {
     function getBuyExchangeRate() public view returns(uint256) {
         return _buyExchangeRate;
     }  
+    function getReserveTokenLimitPerDay() public view returns(uint256) {
+        return reserveTokenLimitPerDay;
+    } 
 }
 
 

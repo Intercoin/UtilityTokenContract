@@ -1,4 +1,5 @@
 const BN = require('bn.js'); // https://github.com/indutny/bn.js
+const BigNumber = require('bignumber.js');
 const util = require('util');
 const UtilityTokenETHOnly = artifacts.require("UtilityTokenETHOnly");
 const UtilityTokenETHOnlyMock = artifacts.require("UtilityTokenETHOnlyMock");
@@ -322,7 +323,22 @@ contract('UtilityTokenETHOnly', (accounts) => {
         await utilityTokenETHOnlyInstance.whitelistAdd([accountTwo], { from: accountOne });
         
         // try again send token back to contract 
-        await utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(new BN(accountTwoTokenEndingBalance+'',10)).toString(16), { from: accountTwo });
+        // await utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(new BN(accountTwoTokenEndingBalance+'',10)).toString(16), { from: accountTwo });
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(new BN(accountTwoTokenEndingBalance+'',10)).toString(16), { from: accountTwo }), 
+            "Amount exceeds available reserve token limit."
+        );
+        
+        let reserveTokenLimitPerDay = await utilityTokenETHOnlyInstance.getReserveTokenLimitPerDay();
+        
+        let token2Transfer =  BigNumber(parseInt(accountTwoTokenEndingBalance)).times(BigNumber(reserveTokenLimitPerDay)).div(BigNumber(1e6))
+        
+        await utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(new BN(token2Transfer+'',10)).toString(16), { from: accountTwo });
+        
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(new BN(token2Transfer+'',10)).toString(16), { from: accountTwo }), 
+            "Available only one time in 24h."
+        );
         
         const instanceETHEndingBalance2 = (await web3.eth.getBalance(utilityTokenETHOnlyInstance.address));
         const instanceETHEndingTotalSupply2 = (await utilityTokenETHOnlyInstance.totalSupply());
@@ -331,14 +347,24 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const accountTwoETHEndingBalance2 = (await web3.eth.getBalance(accountTwo));
         
         assert.equal(
-            new BN(accountTwoTokenEndingBalance2+'',10).toString(16), 
-            new BN(0+'',10).toString(16), 
+            (
+                BigNumber(parseInt(accountTwoTokenEndingBalance2))
+            ).toString(), 
+            (
+                BigNumber(parseInt(accountTwoTokenEndingBalance)).minus(BigNumber(token2Transfer))
+            ).toString(), 
             'Tokens were not transfered to contract'
         );
-        
+
         assert.equal(
-            new BN(instanceETHEndingTotalSupply2+'',10).toString(16), 
-            new BN(instanceETHStartingTotalSupply+'',10).toString(16), 
+            
+            (
+                BigNumber(parseInt(instanceETHEndingTotalSupply2))
+            ).toString(), 
+            (
+                BigNumber(parseInt(instanceETHEndingTotalSupply)).minus(BigNumber(token2Transfer))
+            ).toString(), 
+            
             'Contract does not burn tokens'
         );
         
@@ -346,7 +372,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
             (
                 (
                     new BN(instanceETHEndingBalance, 10)).sub(
-                        new BN(accountTwoTokenEndingBalance+'',10).mul(new BN(sellExchangeRate+'',10)).div(new BN(100+'',10))
+                        new BN(token2Transfer+'',10).mul(new BN(sellExchangeRate+'',10)).div(new BN(100+'',10))
                     )
                 ).toString(16), 
             (new BN(instanceETHEndingBalance2, 10)).toString(16),

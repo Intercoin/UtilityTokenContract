@@ -1,4 +1,5 @@
 const BN = require('bn.js'); // https://github.com/indutny/bn.js
+const BigNumber = require('bignumber.js');
 const util = require('util');
 const UtilityToken = artifacts.require("UtilityToken");
 const UtilityTokenMock = artifacts.require("UtilityTokenMock");
@@ -332,7 +333,24 @@ contract('UtilityToken', (accounts) => {
         await utilityTokenInstance.whitelistAdd([accountTwo], { from: accountOne });
         
         // try again send token back to contract 
-        await utilityTokenInstance.transfer(utilityTokenInstance.address, '0x'+(new BN(accountTwoToken1EndingBalance+'',10)).toString(16), { from: accountTwo });
+        // await utilityTokenInstance.transfer(utilityTokenInstance.address, '0x'+(new BN(accountTwoToken1EndingBalance+'',10)).toString(16), { from: accountTwo });
+        await truffleAssert.reverts(
+            utilityTokenInstance.transfer(utilityTokenInstance.address, '0x'+(new BN(accountTwoToken1EndingBalance+'',10)).toString(16), { from: accountTwo }), 
+            "Amount exceeds available reserve token limit."
+        );
+        
+        let reserveTokenLimitPerDay = await utilityTokenInstance.getReserveTokenLimitPerDay();
+        
+        let token2Transfer =  BigNumber(parseInt(accountTwoToken1EndingBalance)).times(BigNumber(reserveTokenLimitPerDay)).div(BigNumber(1e6))
+        
+        await utilityTokenInstance.transfer(utilityTokenInstance.address, '0x'+(new BN(token2Transfer+'',10)).toString(16), { from: accountTwo });
+        
+        await truffleAssert.reverts(
+            utilityTokenInstance.transfer(utilityTokenInstance.address, '0x'+(new BN(token2Transfer+'',10)).toString(16), { from: accountTwo }), 
+            "Available only one time in 24h."
+        );
+        
+        
         
         const instanceToken2EndingBalance2 = (await ERC20MintableToken2Instance.balanceOf.call(utilityTokenInstance.address));
         const instanceToken1EndingBalance2 = (await utilityTokenInstance.totalSupply());
@@ -341,14 +359,24 @@ contract('UtilityToken', (accounts) => {
         const accountTwoToken2EndingBalance2 = (await ERC20MintableToken2Instance.balanceOf.call(accountTwo));
         
         assert.equal(
-            new BN(accountTwoToken1EndingBalance2+'',16).toString(16), 
-            new BN(0+'',10).toString(16), 
+            (
+                BigNumber(parseInt(accountTwoToken1EndingBalance2))
+            ).toString(), 
+            (
+                BigNumber(parseInt(accountTwoToken1EndingBalance)).minus(BigNumber(token2Transfer))
+            ).toString(), 
+            
             'Tokens were not transfered to contract'
         );
         
         assert.equal(
-            new BN(instanceToken1EndingBalance2+'',16).toString(16), 
-            new BN(accountTwoToken1EndingBalance2+'',16).toString(16), 
+            
+            (
+                BigNumber(parseInt(instanceToken1EndingBalance2))
+            ).toString(), 
+            (
+                BigNumber(parseInt(instanceToken1EndingBalance)).minus(BigNumber(token2Transfer))
+            ).toString(), 
             'Contract does not burn tokens'
         );
 
@@ -356,7 +384,7 @@ contract('UtilityToken', (accounts) => {
             (
                 (
                     new BN(instanceToken2EndingBalance, 10)).sub(
-                        new BN(accountTwoToken1EndingBalance+'',10).mul(new BN(sellExchangeRate+'',10)).div(new BN(100+'',10))
+                        new BN(token2Transfer+'',10).mul(new BN(sellExchangeRate+'',10)).div(new BN(100+'',10))
                     )
                 ).toString(16), 
             (new BN(instanceToken2EndingBalance2, 10)).toString(16),

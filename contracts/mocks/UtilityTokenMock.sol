@@ -45,6 +45,9 @@ contract UtilityTokenMock is UtilityToken {
         return _buyExchangeRate;
     }  
     
+    function getReserveTokenLimitPerDay() public view returns(uint256) {
+        return reserveTokenLimitPerDay;
+    }  
 }
 
 
