@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.7.0;
 
 import "./UtilityBase.sol";
@@ -26,7 +27,6 @@ contract UtilityTokenETHOnly is UtilityBase {
 
         claimReserveMinPercent = 50;
         claimTransactionMaxPercent = 2;
-        claimExchangeRate = 100e4;
         claimLockupPeriod = 8640000;// 100 days
         claimGradual = true;
         // ------------------------------
@@ -42,30 +42,20 @@ contract UtilityTokenETHOnly is UtilityBase {
     /**
      * @dev overall balance (in this case - eth)
      */
-    function _overallBalance2() internal view virtual override returns(uint256) {
+    function _reserveTokenBalance() internal view virtual override returns(uint256) {
         return address(this).balance;
     }
     
     /**
-     * @dev internal overrided method. eth will be transfer to sender
+     * @dev internal overrided method. After getting native tokens contract should transfer eth to sender
      * @param amount2send amount of eth
      */
-    function _receivedTokenAfter(uint256 amount2send) internal virtual override {
+    function _transferReserveToken(uint256 amount2send) internal virtual override {
         address payable addr1 = payable(_msgSender()); // correct since Solidity >= 0.6.0
         bool success = addr1.send(amount2send);
         require(success == true, 'Transfer ether was failed'); 
     }
-    
-    /**
-     * @dev getting ETH and send back tokens
-     * @param ethAmount ether amount
-     */
-    function _receivedETH(uint256 ethAmount) internal virtual override {
-        //uint256 amount2send = ethAmount.mul(buyExchangeRate()).div(1e6); // "buy exchange" interpretation with rate 100%
-        //_mint(_msgSender(), amount2send);
-        _mintedOwnTokens(ethAmount);
-    }  
-    
+   
 }
 
 

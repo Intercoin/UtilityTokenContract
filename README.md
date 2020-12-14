@@ -20,11 +20,10 @@ DECIMALS|uint256|1e18|Fraction part.
 maxGasPrice|uint256|1*DECIMALS|maximum Gas Price(in wei) used for transaction. Transaction fail if reached limit
 claimMorePerBlock|uint256|10*DECIMALS|how many tokens available to claim after each block after contract deployed
 claimInitialMax|uint256|1000000*DECIMALS|initial amount that can be claimed by contract without transactions failing
-tokensGrantOneTimeLimit|uint256|1000000*DECIMALS|amount that can be claimed one-time by contract without transactions failing
-claimReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
-claimTransactionMaxPercent|uint256|2| claim fails if token1beingSent * exchangeRate > token2balance * this number / 100
-claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (token1outstanding * exchangeRate - token2balance)
-claimExchangeRate|uint256|99e4| 99% mul 1e6
+claimTransactionMaxLimit|uint256|1000000*DECIMALS|amount that can be claimed one-time by contract without transactions failing
+claimReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new nativeTokensOutstanding * exchangeRate > reserveTokensbalance * (100 - this number) / 100
+claimTransactionMaxPercent|uint256|2| claim fails if nativeTokensbeingSent * exchangeRate > reserveTokensbalance * this number / 100
+claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (nativeTokensOutstanding * exchangeRate - reserveTokensbalance)
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
 claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim
 claimGradual|bool|true| if true then limit is gradually decreasing
@@ -43,10 +42,10 @@ reserveTokenLimitPerDay|uint256|20e4| limit for reserve token
 </thead>
 <tbody>
     <tr>
-		<td><a href="#receiveerc20token2">receiveERC20Token2</a></td>
+		<td><a href="#receivereservetoken">receiveReserveToken</a></td>
 		<td>anyone</td>
         <td>UtilityToken.sol</td>
-		<td>method received Token2.</td>
+		<td>method received Reserve Tokens.</td>
 	</tr>
 	<tr>
 		<td><a href="#receive">receive</a></td>
@@ -130,8 +129,8 @@ reserveTokenLimitPerDay|uint256|20e4| limit for reserve token
 </table>
 
 ### for UtilityToken.sol only
-#### receiveERC20Token2
-method received Token2.
+#### receiveReserveToken
+method received reserve tokens.
 Note that tokens need to approved before
 #### receive
 internal method triggered if contract getting ETH. **but is not supported and through an exception**
@@ -207,12 +206,12 @@ addr|address|address which need to be check
 
 # Examples
 contract can be used in two ways:
-- if `Token2` is exernal ERC20 token (UtilityToken.sol)(UT)
-- if `Token2` is ETH currency (UtilityTokenETHOnly.sol)(UT_eth)
+- if `ReserveToken` is exernal ERC20 token (UtilityToken.sol)(UT)
+- if `ReserveToken` is ETH currency (UtilityTokenETHOnly.sol)(UT_eth)
 
 * want to exchange external Token to our Utility Token(UT)
     * approve some external erc20 tokens to UT contract (<external Token>.approve('<UT.address>', '<amount>')
-    * call method *receiveERC20Token2* of UT contract (<UT Token>.receiveERC20Token2('false'))
+    * call method *receiveReserveToken* of UT contract (<UT Token>.receiveReserveToken('false'))
 * want to exchange ETH to our Utility Token(UT_eth)
     * send directly to UT_eth contract some ETH
 * want to manage whitelist (owner option)

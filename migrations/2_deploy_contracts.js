@@ -16,4 +16,5 @@ module.exports = function(deployer) {
 //   deployer.deploy(UtilityToken,'t3','t3',"0x0000000000000000000000000000000000000000");
 //   deployer.deploy(UtilityTokenMock,'t4','t4',"0x0000000000000000000000000000000000000000");
   deployer.deploy(ERC20Mintable2,'t5','t5');
+  
 };

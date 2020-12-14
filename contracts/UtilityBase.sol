@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.7.0;
 
 import "./openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
@@ -5,12 +6,14 @@ import "./openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import "./Whitelist.sol";
-import "./CommonConstants.sol";
 import "./Claimed.sol";
 
-contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, ReentrancyGuard {
+contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
+    
+    // Fraction part. means 1e18
+    uint256 constant public DECIMALS = 10**18;
     
     uint256 public maxGasPrice = 1 * DECIMALS;
     
@@ -22,25 +25,19 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     uint256 claimInitialMax = 1000000 * DECIMALS;
     
     // amount that can be claimed one-time by contract without transactions failing
-    uint256 tokensClaimOneTimeLimit = 1000000 * DECIMALS;
+    uint256 claimTransactionMaxLimit = 1000000 * DECIMALS;
     
-    // consider total token2 balance held at start of block when sending, 
-    // claim fails if we would have new token1outstanding * exchangeRate > token2balance * (100 - this number) / 100
+    // consider reserveTokenBalance balance held at start of block when sending, 
+    // claim fails if we would have new potentialNativeTokenTotal * sellExchangeRate > reserveTokenBalance * (100 - this number) / 100
     uint256 claimReserveMinPercent = 20;
     
-    // consider total token2 balance held at start of block when sending, 
-    // claim fails if token1beingSent * exchangeRate > token2balance * this number / 100
+    // consider reserveTokenBalance balance held at start of block when sending, 
+    // claim fails if nativeTokenBeingSent * sellExchangeRate > reserveTokenBalance * this number / 100
     uint256 claimTransactionMaxPercent = 2;
     
-    // deficit = token1outstanding * exchangeRate - token2balance . 
+    // deficit = nativeTokenOutstanding * sellExchangeRate - reserveTokenBalance . 
     // claim fails if claimDeficitMax exceeds this number.
     uint256 claimDeficitMax = 1000000 * DECIMALS;
-    
-    // claim discount
-    uint256 claimExchangeRate = 99e4;
-    
-    // total claimed
-    uint256 claimTotal = 0;
     
     // default variable for claim permissions
     uint256 claimLockupPeriod = 100; // seconds
@@ -48,9 +45,25 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     bool claimGradual = true;
     
+    /**
+     * @param maxClaimingSpeed: 2e4, // 2% of sender balance
+     * @param ownerCanWithdraw: true, // owner withdraw it
+     * @param ownerThrottleWithdraw: 60*60*24*365/2,
+     * @param ownerWithdrawLast stored time automatically when owner withdraw
+     * @param exchangeRate: 100e4, // 1 ITRF for 1 ITR (optional)
+     * @param exists   flag needed to check exists in mapping structure
+     */
+    struct ClaimingTokenInfo {
+        uint256 maxClaimingSpeed;
+        bool ownerCanWithdraw;
+        uint256 ownerThrottleWithdraw;
+        uint256 ownerWithdrawLast;
+        uint256 exchangeRate;
+        bool exists;
+    }
     uint256 private tokensForClaimingCount = 0;
     address[] private tokensForClaiming;
-    mapping (address => uint256) private tokensForClaimingMap;
+    mapping (address => ClaimingTokenInfo) private tokensForClaimingMap;
     
     uint256 internal _sellExchangeRate = 99e4; // 99% * 1e6
     uint256 internal _buyExchangeRate = 100e4; // 100% *1e6
@@ -92,10 +105,10 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     // 
     /**
-     * Recieved ether and transfer token to sender
+     * Recieved ether and transfer native tokens to sender
      */
     receive() external payable virtual validGasPrice {
-        _receivedETH(msg.value);
+        _mintedNativeToken(msg.value);
     }
     
     /**
@@ -108,17 +121,36 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
     
     /**
      * @param tokenForClaiming address of claiming token
-     * @param fraction percent that we can claim from participant. mul by 1e6
-     * so 50% is 50e4
+     * @param maxClaimingSpeed percent that we can claim from participant. mul by 1e6
+     * @param ownerCanWithdraw if true owner can withdraw clamed tokens
+     * @param ownerThrottleWithdraw period than owner can withdraw clamed tokens (if ownerCanWithdraw param set true) 
+     * @param exchangeRate exchange rate claimed to native tokens. mul by 1e6
+
      */
-    function claimingTokenAdd(address tokenForClaiming, uint256 fraction) public onlyOwner {
+    function claimingTokenAdd(
+        address tokenForClaiming, 
+        uint256 maxClaimingSpeed,
+        bool ownerCanWithdraw,
+        uint256 ownerThrottleWithdraw,
+        uint256 exchangeRate
+    ) 
+        public 
+        onlyOwner 
+    {
         require(tokenForClaiming.isContract(), 'tokenForClaiming must be a contract address');
-        if (tokensForClaimingMap[tokenForClaiming] != 0) {
+        if (tokensForClaimingMap[tokenForClaiming].exists == true) {
             // already exist
         } else {
             tokensForClaiming.push(tokenForClaiming);
             tokensForClaimingCount = tokensForClaimingCount.add(1);
-            tokensForClaimingMap[tokenForClaiming] = fraction;
+            
+            tokensForClaimingMap[tokenForClaiming].maxClaimingSpeed = maxClaimingSpeed;
+            tokensForClaimingMap[tokenForClaiming].ownerCanWithdraw = ownerCanWithdraw; // true;
+            tokensForClaimingMap[tokenForClaiming].ownerThrottleWithdraw = ownerThrottleWithdraw; // 15768000; // 60*60*24*365/2,  6 motnhs
+            tokensForClaimingMap[tokenForClaiming].ownerWithdrawLast = now;
+            tokensForClaimingMap[tokenForClaiming].exchangeRate = exchangeRate; // 100e4;
+            tokensForClaimingMap[tokenForClaiming].exists = true;
+              
             emit claimingTokenAdded(tokenForClaiming);
         }
     }
@@ -130,12 +162,20 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         list = tokensForClaiming;
     }
     
-    
+    /**
+     * owner can withdraw claimed tokens, if predifined option `ownerCanWithdraw` set to true
+     */
     function claimingTokensWithdraw() public onlyOwner nonReentrant() {
         
         for (uint256 i = 0; i < tokensForClaimingCount; i++) {
             uint256 amount = IERC20(tokensForClaiming[i]).balanceOf(address(this));
-            if (amount > 0) {
+            if (
+                (amount > 0) &&
+                (tokensForClaimingMap[tokensForClaiming[i]].ownerCanWithdraw == true) &&
+                (now.sub(tokensForClaimingMap[tokensForClaiming[i]].ownerWithdrawLast) >= tokensForClaimingMap[tokensForClaiming[i]].ownerThrottleWithdraw )
+                
+            ) {
+                tokensForClaimingMap[tokensForClaiming[i]].ownerWithdrawLast = now;
                 // try to get
                 bool success = IERC20(tokensForClaiming[i]).transferFrom(address(this), owner(), amount);
                 require(success == true, 'Transfer tokens were failed'); 
@@ -162,41 +202,46 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
             if (allowedAmount > 0) {
             
                 require (
-                    (allowedAmount.mul(1e6)).div(senderBalance) <= tokensForClaimingMap[tokensForClaiming[i]],
+                    (allowedAmount.mul(1e6)).div(senderBalance) <= tokensForClaimingMap[tokensForClaiming[i]].maxClaimingSpeed,
                     'Amount exceeds available claiming rates limit.'
                 );
         
                 hasAllowedAmount = true;
                 
-                // own token with rate 1to1
-                uint256 amount = allowedAmount;
                 
-                claimTotal = claimTotal.add(amount);
+                // get native token amount from claiming  with exchangeRate
+                uint256 amount = allowedAmount.
+                    mul(
+                        tokensForClaimingMap[tokensForClaiming[i]].exchangeRate
+                    ).
+                    div(1e6);
+
+                uint256 potentialTotal = amount.add(totalSupply());
                 
-                if (claimTotal <= claimInitialMax) {
+                if (potentialTotal <= claimInitialMax) {
                     //allow claim without check any restrictions;
                 } else {
                     require(
-                        (claimTotal < claimInitialMax.add(((now).sub(startTime)).mul(claimMorePerSeconds))), 
+                        (potentialTotal < claimInitialMax.add(((now).sub(startTime)).mul(claimMorePerSeconds))), 
                         'This many tokens are not available to be claimed yet' 
                     );
                     require(
-                        claimTotal.mul(claimExchangeRate).div(1e6) <= _overallBalance2().mul(100-claimReserveMinPercent).div(100), 
+                        potentialTotal.mul(_sellExchangeRate).div(1e6) <= _reserveTokenBalance().mul(100-claimReserveMinPercent).div(100), 
                         'Amount exceeds available reserve limit' 
                     );
                     require(
-                        amount.mul(claimExchangeRate).div(1e6) <= _overallBalance2().mul(claimTransactionMaxPercent).div(100),
+                        amount.mul(_sellExchangeRate).div(1e6) <= _reserveTokenBalance().mul(claimTransactionMaxPercent).div(100),
                         'Amount exceeds transaction max percent' 
                     );
                     
                     require(
-                        ((claimTotal).mul(claimExchangeRate).div(1e6)).sub(_overallBalance2()) <= claimDeficitMax,
+                        ((potentialTotal).mul(_sellExchangeRate).div(1e6)).sub(_reserveTokenBalance()) <= claimDeficitMax,
                         'Amount exceeds deficit max'
                     );
             
                 }
                
-                require(tokensClaimOneTimeLimit >= amount, 'Too many tokens to claim in one transaction');
+                require(claimTransactionMaxLimit >= amount, 'Too many tokens to claim in one transaction');
                 
                 
                 // try to get
@@ -234,57 +279,46 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         if (recipient == address(this)) {
             
             
-            _receivedToken(amount, senderBalanceBefore);
+            _receivedNativeToken(amount, senderBalanceBefore);
             _burn(address(this), amount);
         }
         
         return true;
     }
     
-    function _overallBalance2() internal view virtual returns(uint256) {
+    function _reserveTokenBalance() internal view virtual returns(uint256) {
         // need to be implement in child
         return 0;
     }
     
     /**
-     * @dev private method. getting Tokens and send back eth(token2)
+     * @dev getting native tokens and send back eth(reserveToken)
      * Available only to recipient in whitelist
-     * @param tokensAmount tokens amount
+     * @param nativeTokensAmount native tokens amount
+     * @param senderNativeTokensBalanceBefore native tokens balance sender before transfer
      */
-    function _receivedToken(uint256 tokensAmount, uint256 tokensBalanceBefore) internal onlyWhitelist {
-        
-        uint256 balanceToken2 = _overallBalance2();
-        uint256 amount2send = tokensAmount.mul(sellExchangeRate()).div(1e6); // "sell exchange" interpretation with rate discount
-        require ((amount2send <= balanceToken2 && balanceToken2>0), 'Amount exceeds available balance.');
+    function _receivedNativeToken(uint256 nativeTokensAmount , uint256 senderNativeTokensBalanceBefore) internal onlyWhitelist {
+       
+        uint256 balanceReserveToken = _reserveTokenBalance();
+        uint256 reserveTokensAmount = nativeTokensAmount .mul(sellExchangeRate()).div(1e6); // "sell exchange" interpretation with rate discount
+        require ((reserveTokensAmount <= balanceReserveToken && balanceReserveToken > 0), 'Amount exceeds available balance.');
         
         require (
             (now.sub(lastObtainedReserveToken[_msgSender()]) >= 86400),
             'Available only one time in 24h.'
         );
         require (
-            (tokensAmount.mul(1e6)).div(tokensBalanceBefore) <= reserveTokenLimitPerDay,
+            (nativeTokensAmount .mul(1e6)).div(senderNativeTokensBalanceBefore) <= reserveTokenLimitPerDay,
             'Amount exceeds available reserve token limit.'
         );
         
         lastObtainedReserveToken[_msgSender()] = now;
 
-        
-        
-        
-        _receivedTokenAfter(amount2send);
+        _transferReserveToken(reserveTokensAmount);
         
     }
     
-    function _receivedTokenAfter(uint256 amount2send) internal virtual {
-        // need to be implement in child
-    }  
-    
-    
-    /**
-     * @dev private method. getting ETH and send back minted tokens
-     * @param ethAmount ether amount
-     */
-    function _receivedETH(uint256 ethAmount) internal virtual {
+    function _transferReserveToken(uint256 amount2send) internal virtual {
         // need to be implement in child
     }  
     
@@ -304,10 +338,13 @@ contract UtilityBase is ERC20, Ownable, CommonConstants, Whitelist, Claimed, Ree
         return _buyExchangeRate;
     }  
     
-    
-    function _mintedOwnTokens(uint256 amount) internal {
-        uint256 amount2mint = amount.mul(buyExchangeRate()).div(1e6); // "buy exchange" interpretation with rate 100%
-        _mint(_msgSender(), amount2mint);
+    /**
+     * converted reserve tokens to native tokens and mint it to sender
+     * @param reserveTokenAmount reserve tokens(or eth) which will be converted to native tokens and minted it
+     */
+    function _mintedNativeToken(uint256 reserveTokenAmount) internal {
+        uint256 nativeTokensAmount = reserveTokenAmount.mul(buyExchangeRate()).div(1e6);
+        _mint(_msgSender(), nativeTokensAmount);
     } 
 }
 

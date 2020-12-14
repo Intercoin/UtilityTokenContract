@@ -1,11 +1,10 @@
 pragma solidity >=0.6.0 <0.7.0;
 
-//import "../openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../UtilityToken.sol";
 
-contract UtilityTokenFactory/* is Ownable*/{
+contract UtilityTokenFactory{
     
-    UtilityToken[] public utilityTokenAddresses;
+    //UtilityToken[] public utilityTokenAddresses;
     
     event UtilityTokenCreated(UtilityToken utilityToken);
 
@@ -18,9 +17,9 @@ contract UtilityTokenFactory/* is Ownable*/{
         public 
     {
         UtilityToken utilityToken = new UtilityToken(name, symbol, secondary_token);
-        utilityTokenAddresses.push(utilityToken);
+        // utilityTokenAddresses.push(address(utilityToken));
         emit UtilityTokenCreated(utilityToken);
-        //utilityToken.transferOwnership(_msgSender());
+        // //utilityToken.transferOwnership(_msgSender());
         utilityToken.transferOwnership(msg.sender);
     }
     
