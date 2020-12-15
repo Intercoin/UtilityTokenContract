@@ -62,8 +62,8 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
         bool exists;
     }
     uint256 private tokensForClaimingCount = 0;
-    address[] private tokensForClaiming;
-    mapping (address => ClaimingTokenInfo) private tokensForClaimingMap;
+    address[] internal tokensForClaiming;
+    mapping (address => ClaimingTokenInfo) internal tokensForClaimingMap;
     
     uint256 internal _sellExchangeRate = 99e4; // 99% * 1e6
     uint256 internal _buyExchangeRate = 100e4; // 100% *1e6

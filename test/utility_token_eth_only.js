@@ -324,5 +324,82 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
     });
 
+    
+    it(' checks claim restrictions', async () => {
+        // setup
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        const currentBlockInfo = await web3.eth.getBlock("latest");
+        
+        let tmpClaimsParams = await utilityTokenETHOnlyInstance.getClaimsParams();
+        let claimInitialMax = tmpClaimsParams[0];
+        let claimMorePerSeconds = tmpClaimsParams[1];
+        let claimReserveMinPercent = tmpClaimsParams[2];
+        let claimTransactionMaxPercent = tmpClaimsParams[3];
+        let claimDeficitMax = tmpClaimsParams[4];
+        let claimTransactionMaxLimit = tmpClaimsParams[5];
+        
+        claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
+        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimTransactionMaxPercent,claimDeficitMax,claimTransactionMaxLimit);
+
+        let grantAmount = (
+            BigNumber(claimInitialMax).div(BigNumber(maxClaimingSpeed)).times(1e6)
+        ).toString(16);
+        let claimCorrectRateAmount = (claimInitialMax).toString(16);
+     
+         // Get initial balances of second account.
+        const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
+
+         // add to claim list
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        // now approve
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+claimCorrectRateAmount, { from: accountTwo });
+
+        // claim()
+        await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
+
+        let availableToClaimFor10sec = BigNumber(claimMorePerSeconds).times(BigNumber(10));
+        
+        // pass 5 seconds
+        advanceTimeAndBlock(5);
+        
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+availableToClaimFor10sec.toString(16), {from: accountTwo });
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "This many tokens are not available to be claimed yet"
+        );
+
+        // pass another 5 seconds
+        advanceTimeAndBlock(5);
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "Amount exceeds available reserve limit"
+        );
+        
+        
+        
+        // send ETH to Contract
+        // await web3.eth.sendTransaction({
+        //     from:accountTwo,
+        //     to: utilityTokenETHOnlyInstance.address, 
+        //     value: '0x'+BigNumber(30e18).toString(16)
+            
+        // });
+        //await utilityTokenETHOnlyInstance.donateETH({from: accountTwo, value: '0x'+BigNumber(30e18).toString(16)})
+        
+        
+        // pass 24h
+        // advanceTimeAndBlock(86400);
+        // await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+BigNumber(5e18).toString(16), {from: accountTwo });
+        // await truffleAssert.reverts(
+        //     utilityTokenETHOnlyInstance.claim({from: accountTwo }), 
+        //     "Amount exceeds transaction max percent"
+        // );
+        
+    });
   
 });
