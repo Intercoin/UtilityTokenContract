@@ -19,6 +19,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     
     uint256 startTime;
     
+    // after last claim limit increare by this number
     uint256 claimMorePerSeconds = 10 * DECIMALS;
 
     // initial amount that can be claimed by contract without transactions failing
@@ -83,8 +84,8 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     event claimingTokenAdded(address token);
 
     /**
-     * @param name Token name
-     * @param symbol Token symbol
+     * @param name Native Token name
+     * @param symbol Native Token symbol
      * 
      */
     constructor (
@@ -185,7 +186,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     }
     
     /**
-     * @dev getting own tokens instead claimed tokens
+     * getting own tokens instead claimed tokens
      */
     function claim() validGasPrice public nonReentrant() {
         
@@ -286,13 +287,17 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
         return true;
     }
     
+    /**
+     * get reserve balance for contract 
+     * implementation is different(eth/reserveToken) and will realize in child
+     */
     function _reserveTokenBalance() internal view virtual returns(uint256) {
         // need to be implement in child
         return 0;
     }
     
     /**
-     * @dev getting native tokens and send back eth(reserveToken)
+     * getting native tokens and send back eth(reserveToken)
      * Available only to recipient in whitelist
      * @param nativeTokensAmount native tokens amount
      * @param senderNativeTokensBalanceBefore native tokens balance sender before transfer
@@ -318,12 +323,16 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
         
     }
     
+    /**
+     * transfer reserve amount to sender. amount is already exchanged by exchange rate
+     * implementation is different(eth/reserveToken) and will realize in child
+     */
     function _transferReserveToken(uint256 amount2send) internal virtual {
         // need to be implement in child
     }  
     
      /**
-     * @dev sell exchange rate
+     * sell exchange rate
      * @return rate multiplied at 1e6
      */
     function sellExchangeRate() internal view returns(uint256) {
@@ -331,7 +340,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     }
     
     /**
-     * @dev buy exchange rate
+     * buy exchange rate
      * @return rate multiplied at 1e6
      */
     function buyExchangeRate() internal view returns(uint256) {

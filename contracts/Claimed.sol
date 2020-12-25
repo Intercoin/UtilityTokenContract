@@ -88,7 +88,8 @@ contract Claimed {
         }
     }
     
-    /** Do the same as getAmountLockUp but without gas spent (without cleanup expired claim)
+    /** 
+     * Do the same as getAmountLockUp but without gas spent (without cleanup expired claim)
      * @param recipient recipient's address
      */
     function amountLockUp(address recipient) public view returns (uint256 minimum)  {
