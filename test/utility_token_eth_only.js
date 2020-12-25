@@ -325,7 +325,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
     });
 
     
-    it(' checks claim restrictions', async () => {
+    it('checks claim restrictions', async () => {
         // setup
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
@@ -401,5 +401,78 @@ contract('UtilityTokenETHOnly', (accounts) => {
         // );
         
     });
-  
+    
+    it('simple workflow', async () => {
+        // 1. Someone deployes ITRF contract
+        // 2. ITR holders show up and try to claim some ITRF with claimInitialMax, they have lockup for a while
+        // 3. Then first buyers come and buy ITRF with ETH
+        // 4. People who have ITRF transfer it back to contract and get that amount * sellExchangRate of ETH
+        // 5. But after claimInitialMax, new attempts to put ITRF will require there to be enough reserves of ETH, etc.
+
+        // setup
+        // 1. Someone deployes ITRF contract
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
+        // ----
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        const currentBlockInfo = await web3.eth.getBlock("latest");
+        const amountETHSendToContract = 10*10**18; // 10ETH
+        
+        
+        let tmpClaimsParams = await utilityTokenETHOnlyInstance.getClaimsParams();
+        let claimInitialMax = tmpClaimsParams[0];
+        let claimMorePerSeconds = tmpClaimsParams[1];
+        let claimReserveMinPercent = tmpClaimsParams[2];
+        let claimTransactionMaxPercent = tmpClaimsParams[3];
+        let claimDeficitMax = tmpClaimsParams[4];
+        let claimTransactionMaxLimit = tmpClaimsParams[5];
+        
+         // setup ITR token as claiming
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
+        
+        claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
+        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimTransactionMaxPercent,claimDeficitMax,claimTransactionMaxLimit);
+
+        let grantAmount = (
+            BigNumber(claimInitialMax).div(BigNumber(maxClaimingSpeed)).times(1e6)
+        ).toString(16);
+        let claimCorrectRateAmount = (claimInitialMax).toString(16);
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        // now approve
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+claimCorrectRateAmount, { from: accountTwo });
+        
+        // 2. ITR holders show up and try to claim some ITRF with claimInitialMax, they have lockup for a while
+        await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
+        
+        let availableToClaimFor10sec = BigNumber(claimMorePerSeconds).times(BigNumber(10));
+        // pass 5 seconds
+        advanceTimeAndBlock(5);
+        
+        const accountThreeStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountThree));
+        // 3. Then first buyers come and buy ITRF with ETH
+        await web3.eth.sendTransaction({
+            from:accountThree,
+            to: utilityTokenETHOnlyInstance.address, 
+            value: amountETHSendToContract
+            
+        });
+        const accountThreeEndingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountThree));
+        
+        // 4. People who have ITRF transfer it back to contract and get that amount * sellExchangRate of ETH
+        await utilityTokenETHOnlyInstance.whitelistAdd([accountThree], { from: accountOne });
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.transfer(utilityTokenETHOnlyInstance.address, '0x'+(BigNumber(accountThreeEndingBalance).minus(BigNumber(accountThreeStartingBalance))).toString(16), { from: accountThree }),
+            'Amount exceeds available reserve token limit.'
+        );
+        
+        // 5. But after claimInitialMax, new attempts to put ITRF will require there to be enough reserves of ETH, etc.
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+availableToClaimFor10sec.toString(16), {from: accountTwo });
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }), 
+            "This many tokens are not available to be claimed yet"
+        );
+
+    });
 });
