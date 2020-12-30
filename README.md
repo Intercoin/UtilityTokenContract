@@ -22,7 +22,7 @@ claimMorePerSeconds|uint256|10*DECIMALS|how many tokens available to claim after
 claimInitialMax|uint256|1000000*DECIMALS|initial amount that can be claimed by contract without transactions failing
 claimMaxLimit|uint256|1000000*DECIMALS|amount that can be claimed one-time by contract
 claimReserveMinPercent|uint256|20|Reserve min percent. Grant fails if we would have new nativeTokensOutstanding * exchangeRate > reserveTokensbalance * (100 - this number) / 100
-claimTransactionMaxPercent|uint256|2| claim fails if nativeTokensbeingSent * exchangeRate > reserveTokensbalance * this number / 100
+claimMaxPercent|uint256|2| claim fails if nativeTokensbeingSent * exchangeRate > reserveTokensbalance * this number / 100
 claimDeficitMax|uint256|1000000 * DECIMALS| Grant fails if claimDeficitMax exceeds (nativeTokensOutstanding * exchangeRate - reserveTokensbalance)
 claimLockupPeriod|uint256|100| added limit in seconds for each claim
 claimLockupPercent|uint256|100e4| 100% mul 1e6. percent that would be lockup for each claim

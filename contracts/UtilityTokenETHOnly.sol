@@ -24,7 +24,7 @@ contract UtilityTokenETHOnly is UtilityBase {
         _sellExchangeRate = 1e4; // 1% 1IRTF = 0.01eth
 
         claimReserveMinPercent = 50;
-        claimTransactionMaxPercent = 2;
+        claimMaxPercent = 2;
         claimLockupPeriod = 8640000;// 100 days
         claimGradual = true;
         // ------------------------------

@@ -335,12 +335,12 @@ contract('UtilityTokenETHOnly', (accounts) => {
         let claimInitialMax = tmpClaimsParams[0];
         let claimMorePerSeconds = tmpClaimsParams[1];
         let claimReserveMinPercent = tmpClaimsParams[2];
-        let claimTransactionMaxPercent = tmpClaimsParams[3];
+        let claimMaxPercent = tmpClaimsParams[3];
         let claimDeficitMax = tmpClaimsParams[4];
-        let claimTransactionMaxLimit = tmpClaimsParams[5];
+        let claimMaxLimit = tmpClaimsParams[5];
         
         claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
-        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimTransactionMaxPercent,claimDeficitMax,claimTransactionMaxLimit);
+        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimMaxPercent,claimDeficitMax,claimMaxLimit);
 
         let grantAmount = (
             BigNumber(claimInitialMax).div(BigNumber(maxClaimingSpeed)).times(1e6)
@@ -422,15 +422,15 @@ contract('UtilityTokenETHOnly', (accounts) => {
         let claimInitialMax = tmpClaimsParams[0];
         let claimMorePerSeconds = tmpClaimsParams[1];
         let claimReserveMinPercent = tmpClaimsParams[2];
-        let claimTransactionMaxPercent = tmpClaimsParams[3];
+        let claimMaxPercent = tmpClaimsParams[3];
         let claimDeficitMax = tmpClaimsParams[4];
-        let claimTransactionMaxLimit = tmpClaimsParams[5];
+        let claimMaxLimit = tmpClaimsParams[5];
         
          // setup ITR token as claiming
         await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
         
         claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
-        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimTransactionMaxPercent,claimDeficitMax,claimTransactionMaxLimit);
+        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimMaxPercent,claimDeficitMax,claimMaxLimit);
 
         let grantAmount = (
             BigNumber(claimInitialMax).div(BigNumber(maxClaimingSpeed)).times(1e6)

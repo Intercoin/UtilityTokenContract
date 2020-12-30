@@ -46,16 +46,16 @@ contract UtilityTokenETHOnlyMock is UtilityTokenETHOnly {
     }
     
     function getClaimsParams() public view returns(uint256,uint256,uint256,uint256,uint256,uint256) {
-        return (claimInitialMax, claimMorePerSeconds,claimReserveMinPercent,claimTransactionMaxPercent,claimDeficitMax,claimTransactionMaxLimit);
+        return (claimInitialMax, claimMorePerSeconds,claimReserveMinPercent,claimMaxPercent,claimDeficitMax,claimMaxLimit);
     }
     
     function setClaimsParams(uint256 p1, uint256 p2, uint256 p3, uint256 p4, uint256 p5, uint256 p6) public {
         claimInitialMax = p1;
         claimMorePerSeconds = p2;
         claimReserveMinPercent = p3;
-        claimTransactionMaxPercent = p4;
+        claimMaxPercent = p4;
         claimDeficitMax = p5;
-        claimTransactionMaxLimit = p6;
+        claimMaxLimit = p6;
     } 
     
 }

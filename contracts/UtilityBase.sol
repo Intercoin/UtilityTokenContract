@@ -34,7 +34,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     
     // consider reserveTokenBalance balance held at start of block when sending, 
     // claim fails if nativeTokenBeingSent * sellExchangeRate > reserveTokenBalance * this number / 100
-    uint256 claimTransactionMaxPercent = 2;
+    uint256 claimMaxPercent = 2;
     
     // deficit = nativeTokenOutstanding * sellExchangeRate - reserveTokenBalance . 
     // claim fails if claimDeficitMax exceeds this number.
@@ -231,7 +231,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
                         'Amount exceeds available reserve limit' 
                     );
                     require(
-                        amount.mul(_sellExchangeRate).div(1e6) <= _reserveTokenBalance().mul(claimTransactionMaxPercent).div(100),
+                        amount.mul(_sellExchangeRate).div(1e6) <= _reserveTokenBalance().mul(claimMaxPercent).div(100),
                         'Amount exceeds transaction max percent' 
                     );
                     
