@@ -56,6 +56,8 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
      */
     struct ClaimingTokenInfo {
         uint256 maxClaimingSpeed;
+        uint256 maxClaimingFrequency;
+        mapping (address => uint256) lastUserClaimTime;
         bool ownerCanWithdraw;
         uint256 ownerThrottleWithdraw;
         uint256 ownerWithdrawLast;
@@ -123,6 +125,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     /**
      * @param tokenForClaiming address of claiming token
      * @param maxClaimingSpeed percent that we can claim from participant. mul by 1e6
+     * @param maxClaimingFrequency frequency in seconds that user can be able to claim
      * @param ownerCanWithdraw if true owner can withdraw clamed tokens
      * @param ownerThrottleWithdraw period than owner can withdraw clamed tokens (if ownerCanWithdraw param set true) 
      * @param exchangeRate exchange rate claimed to native tokens. mul by 1e6
@@ -131,6 +134,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     function claimingTokenAdd(
         address tokenForClaiming, 
         uint256 maxClaimingSpeed,
+        uint256 maxClaimingFrequency,
         bool ownerCanWithdraw,
         uint256 ownerThrottleWithdraw,
         uint256 exchangeRate
@@ -146,6 +150,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
             tokensForClaimingCount = tokensForClaimingCount.add(1);
             
             tokensForClaimingMap[tokenForClaiming].maxClaimingSpeed = maxClaimingSpeed;
+            tokensForClaimingMap[tokenForClaiming].maxClaimingFrequency = maxClaimingFrequency;
             tokensForClaimingMap[tokenForClaiming].ownerCanWithdraw = ownerCanWithdraw; // true;
             tokensForClaimingMap[tokenForClaiming].ownerThrottleWithdraw = ownerThrottleWithdraw; // 15768000; // 60*60*24*365/2,  6 motnhs
             tokensForClaimingMap[tokenForClaiming].ownerWithdrawLast = now;
@@ -244,6 +249,11 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
                
                 require(claimMaxLimit >= amount, 'Too many tokens to claim in one transaction');
                 
+                require(
+                    now.sub(tokensForClaimingMap[tokensForClaiming[i]].lastUserClaimTime[_msgSender()]) >= tokensForClaimingMap[tokensForClaiming[i]].maxClaimingFrequency,
+                    'Claim  are to fast'
+                );
+                tokensForClaimingMap[tokensForClaiming[i]].lastUserClaimTime[_msgSender()] = now;
                 
                 // try to get
                 bool success = IERC20(tokensForClaiming[i]).transferFrom(_msgSender(), address(this), allowedAmount);

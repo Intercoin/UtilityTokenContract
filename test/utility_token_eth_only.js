@@ -15,6 +15,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
     const accountTwo = accounts[1];  
     const accountThree = accounts[2];  
     const maxClaimingSpeed = 500000; //50e4
+    const maxClaimingFrequency = 86400; //1day;
     const ownerCanWithdraw = true;
     const ownerThrottleWithdraw = 15768000; // 60*60*24*365/2,  6 motnhs;
     const exchangeRate = 1000000; //100e4
@@ -43,16 +44,16 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
         
         await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountTwo }), 
+            utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountTwo }), 
             "Ownable: caller is not the owner."
         );
         
         await truffleAssert.reverts(
-            utilityTokenETHOnlyInstance.claimingTokenAdd(accountThree, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne }), 
+            utilityTokenETHOnlyInstance.claimingTokenAdd(accountThree, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne }), 
             "tokenForClaiming must be a contract address"
         );
         // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         let list = (await utilityTokenETHOnlyInstance.claimingTokensView({ from: accountOne }));
         
@@ -70,7 +71,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const grantAmount = (10*10**18).toString(16);
         
         // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -116,7 +117,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
         
          // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -298,33 +299,6 @@ contract('UtilityTokenETHOnly', (accounts) => {
         
     });    
 
-    it('should deployed correctly with correctly owner through factory', async () => {
-        
-        const utilityTokenETHOnlyFactoryInstance = await UtilityTokenETHOnlyFactory.new({ from: accountThree });
-        await utilityTokenETHOnlyFactoryInstance.createUtilityTokenETHOnly('t1','t1', { from: accountOne });
-        
-        var utilityTokenETHOnlyAddress; 
-        await utilityTokenETHOnlyFactoryInstance.getPastEvents('UtilityTokenETHOnlyCreated', {
-            filter: {addr: accountOne}, // Using an array in param means OR: e.g. 20 or 23
-            fromBlock: 0,
-            toBlock: 'latest'
-        }, function(error, events){ })
-        .then(function(events){
-            
-            utilityTokenETHOnlyAddress = events[0].returnValues['utilityTokenETHOnly'];
-        });
-        //console.log(utilityTokenETHOnlyAddress);
-        
-        let utilityTokenETHOnlyInstance = await UtilityTokenETHOnly.at(utilityTokenETHOnlyAddress);
-        
-        
-        
-        const owner = (await utilityTokenETHOnlyInstance.owner());
-        assert.equal(owner, accountOne, 'owner is not accountOne');
-        
-    });
-
-    
     it('checks claim restrictions', async () => {
         // setup
         const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
@@ -351,7 +325,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
 
          // add to claim list
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -427,7 +401,7 @@ contract('UtilityTokenETHOnly', (accounts) => {
         let claimMaxLimit = tmpClaimsParams[5];
         
          // setup ITR token as claiming
-        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
         
         claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
         await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimMaxPercent,claimDeficitMax,claimMaxLimit);
@@ -474,5 +448,48 @@ contract('UtilityTokenETHOnly', (accounts) => {
             "This many tokens are not available to be claimed yet"
         );
 
+    });
+    
+    it('checks claim restrictions', async () => {
+        // setup
+        const utilityTokenETHOnlyInstance = await UtilityTokenETHOnlyMock.new('t1','t1');
+        const ERC20MintableTokenInstance = await ERC20MintableToken.new('t2','t2');
+        const currentBlockInfo = await web3.eth.getBlock("latest");
+        
+        let tmpClaimsParams = await utilityTokenETHOnlyInstance.getClaimsParams();
+        let claimInitialMax = tmpClaimsParams[0];
+        let claimMorePerSeconds = tmpClaimsParams[1];
+        let claimReserveMinPercent = tmpClaimsParams[2];
+        let claimMaxPercent = tmpClaimsParams[3];
+        let claimDeficitMax = tmpClaimsParams[4];
+        let claimMaxLimit = tmpClaimsParams[5];
+        
+        claimInitialMax = BigNumber(1000).times(BigNumber(1e18));
+        await utilityTokenETHOnlyInstance.setClaimsParams('0x'+claimInitialMax.toString(16),claimMorePerSeconds,claimReserveMinPercent,claimMaxPercent,claimDeficitMax,claimMaxLimit);
+
+        let grantAmount = (
+            BigNumber(claimInitialMax).div(BigNumber(maxClaimingSpeed)).times(1e6)
+        ).toString(16);
+        let claimCorrectRateAmount = (claimInitialMax).toString(16);
+     
+         // Get initial balances of second account.
+        const accountTwoStartingBalance = (await utilityTokenETHOnlyInstance.balanceOf.call(accountTwo));
+
+         // add to claim list
+        await utilityTokenETHOnlyInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, {from: accountOne });
+        
+        // mint to ERC20MintableToken
+        await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
+        
+        // now approve
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+(BigNumber(claimInitialMax).div(BigNumber(100))).toString(16), { from: accountTwo });
+        // claim()
+        await utilityTokenETHOnlyInstance.claim({ from: accountTwo });
+        
+        await ERC20MintableTokenInstance.approve(utilityTokenETHOnlyInstance.address, '0x'+(BigNumber(claimInitialMax).div(BigNumber(100))).toString(16), { from: accountTwo });
+        await truffleAssert.reverts(
+            utilityTokenETHOnlyInstance.claim({ from: accountTwo }),
+            "Claim  are to fast"
+        );
     });
 });

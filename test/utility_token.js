@@ -16,6 +16,7 @@ contract('UtilityToken', (accounts) => {
     const accountTwo = accounts[1];  
     const accountThree = accounts[2];  
     const maxClaimingSpeed = 500000; //50e4
+    const maxClaimingFrequency = 86400; //1day;
     const ownerCanWithdraw = true;
     const ownerThrottleWithdraw = 15768000; // 60*60*24*365/2,  6 motnhs;
     const exchangeRate = 1000000; //100e4
@@ -50,16 +51,16 @@ contract('UtilityToken', (accounts) => {
         
         
         await truffleAssert.reverts(
-            utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountTwo }), 
+            utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountTwo }), 
             "Ownable: caller is not the owner."
         );
         
         await truffleAssert.reverts(
-            utilityTokenInstance.claimingTokenAdd(accountThree, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne }), 
+            utilityTokenInstance.claimingTokenAdd(accountThree, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne }), 
             "tokenForClaiming must be a contract address"
         );
         // add to claim list
-        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         let list = (await utilityTokenInstance.claimingTokensView({ from: accountOne }));
         
@@ -78,7 +79,7 @@ contract('UtilityToken', (accounts) => {
         const grantAmount = (10*10**18).toString(16);
         
         // add to claim list
-        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -127,7 +128,7 @@ contract('UtilityToken', (accounts) => {
         const accountTwoStartingBalance = (await utilityTokenInstance.balanceOf.call(accountTwo));
         
          // add to claim list
-        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
+        await utilityTokenInstance.claimingTokenAdd(ERC20MintableTokenInstance.address, maxClaimingSpeed, maxClaimingFrequency, ownerCanWithdraw, ownerThrottleWithdraw, exchangeRate, { from: accountOne });
         
         // mint to ERC20MintableToken
         await ERC20MintableTokenInstance.mint(accountTwo, '0x'+grantAmount, { from: accountOne });
@@ -316,29 +317,5 @@ contract('UtilityToken', (accounts) => {
         
         
     });    
-
-    it('should deployed correctly with correctly owner through factory', async () => {
-        
-        const ERC20MintableToken2Instance = await ERC20MintableToken.new('t2','t2');
-        const utilityTokenFactoryInstance = await UtilityTokenFactory.new({ from: accountThree });
-        await utilityTokenFactoryInstance.createUtilityToken('t1','t1', ERC20MintableToken2Instance.address, { from: accountOne });
-        
-        var utilityTokenAddress; 
-        await utilityTokenFactoryInstance.getPastEvents('UtilityTokenCreated', {
-            filter: {addr: accountOne}, // Using an array in param means OR: e.g. 20 or 23
-            fromBlock: 0,
-            toBlock: 'latest'
-        }, function(error, events){  })
-        .then(function(events){
-            
-            utilityTokenAddress = events[0].returnValues['utilityToken'];
-        });
-
-        let utilityTokenInstance = await UtilityToken.at(utilityTokenAddress);
-        
-        const owner = (await utilityTokenInstance.owner());
-        assert.equal(owner, accountOne, 'owner is not accountOne');
-        
-    });
-
+    
 });
