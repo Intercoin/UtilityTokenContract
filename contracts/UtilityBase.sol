@@ -26,7 +26,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     uint256 claimInitialMax = 1000000 * DECIMALS;
     
     // amount that can be claimed one-time by contract without transactions failing
-    uint256 claimTransactionMaxLimit = 1000000 * DECIMALS;
+    uint256 claimMaxLimit = 1000000 * DECIMALS;
     
     // consider reserveTokenBalance balance held at start of block when sending, 
     // claim fails if we would have new potentialNativeTokenTotal * sellExchangeRate > reserveTokenBalance * (100 - this number) / 100
@@ -242,7 +242,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
             
                 }
                
-                require(claimTransactionMaxLimit >= amount, 'Too many tokens to claim in one transaction');
+                require(claimMaxLimit >= amount, 'Too many tokens to claim in one transaction');
                 
                 
                 // try to get
