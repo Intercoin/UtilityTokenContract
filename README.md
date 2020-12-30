@@ -152,9 +152,13 @@ gasPrice|uint256|maximum Gas Price(in wei) used for transaction
 Params:
 name  | type | description
 --|--|--
-tokenForClaiming|address| added token for claiming
-fraction|uint256| fraction
-
+tokenForClaiming|address|added token for claiming
+maxClaimingSpeed|uint256|percent that we can claim from participant. mul by 1e6
+maxClaimingFrequency|uint256|frequency in seconds that user can be able to claim
+ownerCanWithdraw|bool|if true owner can withdraw clamed tokens
+ownerThrottleWithdraw|uint256|period than owner can withdraw clamed tokens (if ownerCanWithdraw param set true) 
+exchangeRate|uint256|exchange rate claimed to native tokens. mul by 1e6
+     
 #### claimingTokensView
 Returned list of claimng tokens
 
