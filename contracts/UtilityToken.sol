@@ -17,9 +17,11 @@ contract UtilityToken is UtilityBase {
     constructor (
         string memory name, 
         string memory symbol,
+        ICommunity community, 
+        uint256 inviterCommission,
         address reserveToken
     ) 
-        UtilityBase(name, symbol) 
+        UtilityBase(name, symbol, community, inviterCommission) 
         public 
     {
         require(reserveToken.isContract(), 'reserveToken must be a contract address');
@@ -56,10 +58,11 @@ contract UtilityToken is UtilityBase {
     }
     /**
      * @dev internal overrided method. After getting native tokens contract should transfer reserve tokens to sender
+     * @param to recipient address 
      * @param amount2send amount of reserve tokens
      */
-    function _transferReserveToken(uint256 amount2send) internal virtual override {
-        bool success = IERC20(reserveTokenAddress).transfer(_msgSender(),amount2send);
+    function _transferReserveToken(address to, uint256 amount2send) internal virtual override {
+        bool success = IERC20(reserveTokenAddress).transfer(to,amount2send);
         require(success == true, 'Transfer tokens were failed');    
     }
     

@@ -12,15 +12,17 @@ contract UtilityTokenETHOnly is UtilityBase {
      */
     constructor (
         string memory name, 
-        string memory symbol
+        string memory symbol,
+        ICommunity community, 
+        uint256 inviterCommission
     ) 
-        UtilityBase(name, symbol) 
+        UtilityBase(name, symbol, community, inviterCommission) 
         public 
     {
         // override variables can be here
         claimLockupPercent = 100e4;
 
-        _buyExchangeRate = 10000e4; // 1000%   1Eth == 100ITRF
+        _buyExchangeRate = 10000e4; // 10000%   1Eth == 100ITRF
         _sellExchangeRate = 1e4; // 1% 1IRTF = 0.01eth
 
         claimReserveMinPercent = 50;
@@ -46,10 +48,11 @@ contract UtilityTokenETHOnly is UtilityBase {
     
     /**
      * @dev internal overrided method. After getting native tokens contract should transfer eth to sender
+     * @param to recipient address 
      * @param amount2send amount of eth
      */
-    function _transferReserveToken(uint256 amount2send) internal virtual override {
-        address payable addr1 = payable(_msgSender()); // correct since Solidity >= 0.6.0
+    function _transferReserveToken(address to, uint256 amount2send) internal virtual override {
+        address payable addr1 = payable(to); // correct since Solidity >= 0.6.0
         bool success = addr1.send(amount2send);
         require(success == true, 'Transfer ether was failed'); 
     }

@@ -10,9 +10,11 @@ contract UtilityTokenETHOnlyMock is UtilityTokenETHOnly {
      */
     constructor (
         string memory name, 
-        string memory symbol
+        string memory symbol,
+        ICommunity community, 
+        uint256 inviterCommission
     ) 
-        UtilityTokenETHOnly(name, symbol) 
+        UtilityTokenETHOnly(name, symbol, community, inviterCommission) 
         public 
     {
 //        _discount = discount;

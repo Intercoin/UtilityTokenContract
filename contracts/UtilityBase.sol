@@ -7,8 +7,10 @@ import "./openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import "./Whitelist.sol";
 import "./Claimed.sol";
+import "./interfaces/ICommunity.sol";
+import "./InvitersReward.sol";
 
-contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
+contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard, InvitersReward {
     using SafeMath for uint256;
     using Address for address;
     
@@ -92,10 +94,13 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
      */
     constructor (
         string memory name, 
-        string memory symbol
+        string memory symbol,
+        ICommunity community, 
+        uint256 inviterCommission
     ) 
         ERC20(name, symbol) 
         Whitelist() 
+        InvitersReward(community, inviterCommission)
         public 
     {
         startTime = now;
@@ -251,7 +256,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
                 
                 require(
                     now.sub(tokensForClaimingMap[tokensForClaiming[i]].lastUserClaimTime[_msgSender()]) >= tokensForClaimingMap[tokensForClaiming[i]].maxClaimingFrequency,
-                    'Claim  are to fast'
+                    'Claim are too fast'
                 );
                 tokensForClaimingMap[tokensForClaiming[i]].lastUserClaimTime[_msgSender()] = now;
                 
@@ -315,7 +320,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
     function _receivedNativeToken(uint256 nativeTokensAmount , uint256 senderNativeTokensBalanceBefore) internal onlyWhitelist {
        
         uint256 balanceReserveToken = _reserveTokenBalance();
-        uint256 reserveTokensAmount = nativeTokensAmount .mul(sellExchangeRate()).div(1e6); // "sell exchange" interpretation with rate discount
+        uint256 reserveTokensAmount = nativeTokensAmount.mul(sellExchangeRate()).div(1e6); // "sell exchange" interpretation with rate discount
         require ((reserveTokensAmount <= balanceReserveToken && balanceReserveToken > 0), 'Amount exceeds available balance.');
         
         require (
@@ -329,7 +334,8 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
         
         lastObtainedReserveToken[_msgSender()] = now;
 
-        _transferReserveToken(reserveTokensAmount);
+        
+        _transferReserveToken(_msgSender(), reserveTokensAmount);
         
     }
     
@@ -337,7 +343,7 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
      * transfer reserve amount to sender. amount is already exchanged by exchange rate
      * implementation is different(eth/reserveToken) and will realize in child
      */
-    function _transferReserveToken(uint256 amount2send) internal virtual {
+    function _transferReserveToken(address to, uint256 amount2send) internal virtual {
         // need to be implement in child
     }  
     
@@ -362,9 +368,36 @@ contract UtilityBase is ERC20, Ownable, Whitelist, Claimed, ReentrancyGuard {
      * @param reserveTokenAmount reserve tokens(or eth) which will be converted to native tokens and minted it
      */
     function _mintedNativeToken(uint256 reserveTokenAmount) internal {
-        uint256 nativeTokensAmount = reserveTokenAmount.mul(buyExchangeRate()).div(1e6);
+        
+        
+        uint256 reserveTokenAmountLeft = invitersRewardProceed(
+            _msgSender(),
+            reserveTokenAmount
+        );
+        
+        
+        uint256 nativeTokensAmount = reserveTokenAmountLeft.mul(buyExchangeRate()).div(1e6);
         _mint(_msgSender(), nativeTokensAmount);
     } 
+    
+    
+   function invitersRewardTransfer(
+        address recipient,
+        uint256 amount2send
+    ) 
+        internal
+        override 
+    {
+       
+        _transferReserveToken(recipient,amount2send);
+    }
+    
+    //     function _transferReserveToken(uint256 amount2send) internal virtual override {
+    //     address payable addr1 = payable(_msgSender()); // correct since Solidity >= 0.6.0
+    //     bool success = addr1.send(amount2send);
+    //     require(success == true, 'Transfer ether was failed'); 
+    // }
+    
 }
 
 

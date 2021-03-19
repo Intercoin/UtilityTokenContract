@@ -12,9 +12,11 @@ contract UtilityTokenMock is UtilityToken {
     constructor (
         string memory name, 
         string memory symbol,
-        address secondary_token
+        address secondary_token,
+        ICommunity community, 
+        uint256 inviterCommission
     ) 
-        UtilityToken(name, symbol, secondary_token) 
+        UtilityToken(name, symbol, community, inviterCommission, secondary_token) 
         public 
     {
 //        _discount = discount;

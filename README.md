@@ -8,6 +8,8 @@ name  | type | description
 --|--|--
 name|string|name utility token. see ERC20 interface
 symbol|string|symbol utility token. see ERC20 interface
+community|address| address of community contract. can be zero then reward mechanism will not work
+inviterCommission|uint256|commission (mul by 1e6) to the inviting user, if the user who was invited by the inviter sent a reserve token. can be zero then reward mechanism will not work
 reserveToken|address|address for external token. used only in UtilityToken.sol
 
 # Overview
